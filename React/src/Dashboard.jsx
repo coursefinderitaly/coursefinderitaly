@@ -86,11 +86,11 @@ const Dashboard = () => {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+      const resp = await fetch(`${API_BASE_URL}/auth/me`, {
         credentials: 'include',
       });
-      if (response.ok) {
-        const data = await response.json();
+      if (resp.ok) {
+        const data = await resp.json();
         if (data.role === 'admin') {
           navigate('/admin');
           return;
@@ -98,12 +98,18 @@ const Dashboard = () => {
         setProfile(data);
         setFormData(data);
       } else {
+        const errData = await resp.json().catch(() => ({}));
+        console.warn('Profile fetch rejected:', errData);
         handleLogout();
       }
     } catch (err) {
-      console.error(err);
+      console.error('Critical Profile Fetch Error:', err);
+      setMessage({ text: 'API unreachable. Contacting server...', type: 'error' });
+      // Wait bit before auto-logout on network error to avoid blink issues
+      setTimeout(() => navigate('/'), 3000);
     }
   };
+
 
   const handleLogout = async () => {
     await fetch(`${API_BASE_URL}/auth/logout`, { method: "POST", credentials: "include" }).catch(() => { });

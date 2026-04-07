@@ -152,6 +152,12 @@ nextApp.prepare().then(async () => {
   app.use('/api/send-student-docs', require('./src/routes/studentDocs'));
   app.use('/api/admin', require('./src/routes/admin'));
   app.use('/api/sheets', require('./src/routes/sheets'));
+  
+  // Health check route
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'up', db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
+  });
+
 
   // Serve static React Frontend builds
   app.use(express.static(path.join(__dirname, '../React/dist')));
