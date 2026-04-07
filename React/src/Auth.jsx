@@ -75,18 +75,9 @@ const Auth = ({ isModal = false, onClose, initialMode = 'login', initialRole = '
     style: { cursor: 'pointer', color: 'var(--text-muted)' }
   };
 
-  useEffect(() => {
-    // Auto-redirect if cookie is valid
-    fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
-      .then(res => {
-        if (res.ok) {
-          sessionStorage.setItem('tab_session', 'true');
-          navigate('/dashboard');
-        }
-      })
+    // Automatic session redirect removed by user request. 
+    // The modal will now stay open and allow manual re-login or registration.
 
-      .catch(() => {});
-  }, [navigate]);
 
   useEffect(() => {
     if (showSuccessPopup) {

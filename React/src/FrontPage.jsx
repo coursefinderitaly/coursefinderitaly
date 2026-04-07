@@ -73,14 +73,9 @@ const FrontPage = () => {
                         aria-label={`Switch to ${activeTheme === 'dark' ? 'light' : 'dark'} mode`}>
                         {activeTheme === 'dark' ? <SunIcon /> : <MoonIcon />}
                     </button>
-                    {isLoggedIn ? (
-                        <button onClick={() => window.location.href = '/dashboard'} className="btn-primary-glow">Go to Dashboard</button>
-                    ) : (
-                        <>
-                            <button onClick={() => openAuth('login')} className="btn-ghost">Login</button>
-                            <button onClick={() => openAuth('signup')} className="btn-primary-glow">Register</button>
-                        </>
-                    )}
+                    <button onClick={() => openAuth('login')} className="btn-ghost">Login</button>
+                    <button onClick={() => openAuth('signup')} className="btn-primary-glow">Register</button>
+
 
                 </div>
             </nav>
