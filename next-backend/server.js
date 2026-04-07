@@ -17,6 +17,10 @@ const PORT = process.env.PORT || 5000;
 
 nextApp.prepare().then(async () => {
   const app = express();
+  
+  // Trust proxy for Render/Cloud platforms
+  app.set('trust proxy', 1);
+
 
   // CORS Configuration
   app.use(cors({
