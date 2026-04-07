@@ -4,6 +4,7 @@ import Auth from './Auth';
 import DashGallery from './components/DashGallery';
 import ModernFeatures from './components/ModernFeatures';
 import { useTheme } from './ThemeContext';
+import { API_BASE_URL } from './config';
 import './FrontPage.css';
 
 /* Sun SVG icon */
@@ -28,6 +29,15 @@ const FrontPage = () => {
     const [authMode, setAuthMode] = useState('login');
     const [authRole, setAuthRole] = useState('student');
     const { activeTheme, setTheme } = useTheme();
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
+            .then(res => setIsLoggedIn(res.ok))
+            .catch(() => setIsLoggedIn(false));
+    }, []);
+
+
 
     const openAuth = (mode, role = 'student') => {
         setAuthMode(mode);
@@ -63,8 +73,15 @@ const FrontPage = () => {
                         aria-label={`Switch to ${activeTheme === 'dark' ? 'light' : 'dark'} mode`}>
                         {activeTheme === 'dark' ? <SunIcon /> : <MoonIcon />}
                     </button>
-                    <button onClick={() => openAuth('login')} className="btn-ghost">Login</button>
-                    <button onClick={() => openAuth('signup')} className="btn-primary-glow">Register</button>
+                    {isLoggedIn ? (
+                        <button onClick={() => window.location.href = '/dashboard'} className="btn-primary-glow">Go to Dashboard</button>
+                    ) : (
+                        <>
+                            <button onClick={() => openAuth('login')} className="btn-ghost">Login</button>
+                            <button onClick={() => openAuth('signup')} className="btn-primary-glow">Register</button>
+                        </>
+                    )}
+
                 </div>
             </nav>
 

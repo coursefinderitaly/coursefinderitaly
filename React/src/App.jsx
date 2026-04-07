@@ -13,20 +13,27 @@ function App() {
 
   return (
     <ThemeProvider>
-      <StrictSessionManager>
-        <Router>
-          <IdleTimeout>
-            <Routes>
-              <Route path="/" element={<FrontPage />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/admin" element={<AdminPortal />} />
-              {/* Redirect unknown routes */}
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </IdleTimeout>
-        </Router>
-      </StrictSessionManager>
+      <Router>
+        <IdleTimeout>
+          <Routes>
+            <Route path="/" element={<FrontPage />} />
+            <Route path="/dashboard" element={
+              <StrictSessionManager>
+                <Dashboard />
+              </StrictSessionManager>
+            } />
+            <Route path="/admin" element={
+              <StrictSessionManager>
+                <AdminPortal />
+              </StrictSessionManager>
+            } />
+            {/* Redirect unknown routes */}
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </IdleTimeout>
+      </Router>
     </ThemeProvider>
+
   );
 }
 

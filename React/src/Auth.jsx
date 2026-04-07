@@ -79,8 +79,12 @@ const Auth = ({ isModal = false, onClose, initialMode = 'login', initialRole = '
     // Auto-redirect if cookie is valid
     fetch(`${API_BASE_URL}/auth/me`, { credentials: 'include' })
       .then(res => {
-        if (res.ok) navigate('/dashboard');
+        if (res.ok) {
+          sessionStorage.setItem('tab_session', 'true');
+          navigate('/dashboard');
+        }
       })
+
       .catch(() => {});
   }, [navigate]);
 
