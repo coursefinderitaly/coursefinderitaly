@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix next-backend\" \"npm run dev --prefix React\"",
+    "postinstall": "npm install --prefix next-backend && npm install --prefix React",
+    "build": "npm run build --prefix next-backend && npm run build --prefix React",
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "framer-motion": "^12.38.0",
+    "gsap": "^3.14.2",
+    "mongodb": "^7.1.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
