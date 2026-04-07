@@ -3,4 +3,5 @@ const isLocal = window.location.hostname === 'localhost' || window.location.host
 
 export const API_BASE_URL = isLocal
     ? 'http://localhost:5000/api'   // Local Next.js custom server
-    : 'https://coursefinder2-0.onrender.com/api'; // Render Backend API
+    : window.location.origin + '/api'; // Current Domain Backend API
+

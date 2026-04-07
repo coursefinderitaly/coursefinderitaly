@@ -23,11 +23,26 @@ nextApp.prepare().then(async () => {
 
 
   // CORS Configuration
+  const allowedOrigins = [
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176',
+    'https://coursefinderitaly.com', 'https://www.coursefinderitaly.com',
+    'https://coursefinder2-0.onrender.com'
+  ];
+
   app.use(cors({
-    origin: [process.env.FRONTEND_URL || 'http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176'],
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('coursefinderitaly.com')) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Fallback: allow all for now to fix Hostinger login loop
+    },
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-protected', 'x-auth-token']
   }));
+
 
   // Security Middleware
   app.use(helmet({
