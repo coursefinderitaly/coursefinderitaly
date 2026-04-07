@@ -3,7 +3,7 @@
     "dev": "concurrently \"npm run dev --prefix next-backend\" \"npm run dev --prefix React\"",
     "postinstall": "npm install --prefix next-backend && npm install --prefix React",
     "build": "npm run build --prefix next-backend && npm run build --prefix React",
-    "start": "node app.js"
+    "start": "node next-backend/server.js"
   },
   "dependencies": {
     "framer-motion": "^12.38.0",
