@@ -39,7 +39,7 @@ const FrontPage = () => {
 
 
 
-    const openAuth = (mode, role = 'student') => {
+    const openAuth = (mode, role = 'partner') => {
         setAuthMode(mode);
         setAuthRole(role);
         setShowAuthModal(true);

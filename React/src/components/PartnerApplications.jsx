@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, Building, MapPin, GraduationCap, FileText, User, 
-  CheckCircle, Phone, Filter, Mail, List, Calendar, Briefcase 
+  CheckCircle, Phone, Filter, Mail, List, Calendar, Briefcase, Clock
 } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 
@@ -93,20 +93,20 @@ const PartnerApplications = ({ profile, setMessage }) => {
     });
   }, [allApplications, searchTerm, studentSearchTerm, locationFilter, levelFilter, counselorFilter]);
 
-  const StatusBadge = ({ status = 'Finalized' }) => (
+  const StatusBadge = ({ status = 'Under Process' }) => (
     <span style={{ 
       display: 'inline-flex', 
       alignItems: 'center', 
       gap: '6px', 
-      color: '#10b981', 
+      color: '#eab308', 
       fontWeight: 600, 
-      background: 'rgba(16, 185, 129, 0.1)', 
+      background: 'rgba(234, 179, 8, 0.1)', 
       padding: '4px 10px', 
       borderRadius: '20px', 
       fontSize: '0.75rem',
-      border: '1px solid rgba(16, 185, 129, 0.2)'
+      border: '1px solid rgba(234, 179, 8, 0.2)'
     }}>
-      <CheckCircle size={12} /> {status}
+      <Clock size={12} /> {status}
     </span>
   );
 
@@ -120,6 +120,24 @@ const PartnerApplications = ({ profile, setMessage }) => {
           <p>Consolidated ledger of student university filings and counselor submissions.</p>
         </div>
       </header>
+
+      {/* Notice Banner */}
+      <div style={{ 
+        background: 'rgba(239, 68, 68, 0.1)', 
+        border: '1px solid rgba(239, 68, 68, 0.2)', 
+        padding: '12px 20px', 
+        borderRadius: '12px', 
+        marginBottom: '20px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '10px', 
+        color: '#ef4444' 
+      }}>
+        <Clock size={18} />
+        <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+          Notice: Submitted applications are currently Under Process. Please allow up to 48 hours for updates.
+        </span>
+      </div>
 
       {/* ENHANCED FILTER BAR */}
       <div className="widget" style={{ padding: '20px', marginBottom: '5px', background: 'var(--card-bg-solid)', border: '1px solid var(--glass-border)' }}>

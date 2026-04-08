@@ -104,22 +104,6 @@ const ModernFeatures = ({ openAuth }) => {
             
             {/* Split Section: Students & Partners side-by-side */}
             <div className="features-container split-view-container">
-                <TiltCard glowColor="rgba(59, 130, 246, 0.25)">
-                    <div className="split-card student-card">
-                        <div className="split-header">
-                            <div className="header-badge" style={{color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)'}}>
-                                <GraduationCap size={16} />
-                                <span>For Students</span>
-                            </div>
-                            <h3>Empowering Your <span>Journey</span></h3>
-                        </div>
-                        <div className="split-body">
-                            {studentFeatures.map((f, i) => <CompactFeatureItem key={i} feature={f} />)}
-                        </div>
-                        <button className="split-cta student-cta" onClick={() => openAuth('signup', 'student')}>Create Student Account</button>
-                    </div>
-                </TiltCard>
-
                 <TiltCard glowColor="rgba(244, 63, 94, 0.25)">
                     <div className="split-card partner-card">
                         <div className="split-header">
@@ -133,6 +117,22 @@ const ModernFeatures = ({ openAuth }) => {
                             {partnerFeatures.map((f, i) => <CompactFeatureItem key={i} feature={f} />)}
                         </div>
                         <button className="split-cta partner-cta" onClick={() => openAuth('signup', 'partner')}>Partner Registration</button>
+                    </div>
+                </TiltCard>
+
+                <TiltCard glowColor="rgba(59, 130, 246, 0.25)">
+                    <div className="split-card student-card">
+                        <div className="split-header">
+                            <div className="header-badge" style={{color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)'}}>
+                                <GraduationCap size={16} />
+                                <span>For Students</span>
+                            </div>
+                            <h3>Empowering Your <span>Journey</span></h3>
+                        </div>
+                        <div className="split-body">
+                            {studentFeatures.map((f, i) => <CompactFeatureItem key={i} feature={f} />)}
+                        </div>
+                        <button className="split-cta student-cta" onClick={() => openAuth('signup', 'student')}>Create Student Account</button>
                     </div>
                 </TiltCard>
             </div>

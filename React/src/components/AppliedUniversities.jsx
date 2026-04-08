@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Building, MapPin, GraduationCap, CheckSquare, FileText, Search, Filter } from 'lucide-react';
+import { Building, MapPin, GraduationCap, CheckSquare, FileText, Search, Filter, Clock } from 'lucide-react';
 
 const AppliedUniversities = ({ profile }) => {
   const appliedUniversities = (profile?.appliedUniversities || []).filter(u => u && typeof u === 'object' && u.id);
@@ -37,6 +37,24 @@ const AppliedUniversities = ({ profile }) => {
           <p>Review the record of all academic applications submitted to your target institutions.</p>
         </div>
       </header>
+
+      {/* Notice Banner */}
+      <div style={{ 
+        background: 'rgba(239, 68, 68, 0.1)', 
+        border: '1px solid rgba(239, 68, 68, 0.2)', 
+        padding: '12px 20px', 
+        borderRadius: '12px', 
+        marginBottom: '20px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '10px', 
+        color: '#ef4444' 
+      }}>
+        <Clock size={18} />
+        <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>
+          Notice: Submitted applications are currently Under Process. Please allow up to 48 hours for updates.
+        </span>
+      </div>
 
       {appliedUniversities.length === 0 ? (
         <div className="widget placeholder-panel mt-4">
@@ -99,8 +117,8 @@ const AppliedUniversities = ({ profile }) => {
                       </div>
                     </div>
                     <div>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: 600, background: 'rgba(16, 185, 129, 0.1)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                        <CheckSquare size={14} /> Submitted & Locked
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#eab308', fontWeight: 600, background: 'rgba(234, 179, 8, 0.1)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.85rem', whiteSpace: 'nowrap', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
+                        <Clock size={14} /> Under Process
                       </span>
                     </div>
                   </div>

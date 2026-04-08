@@ -14,7 +14,7 @@ import { Country, State, City } from 'country-state-city';
 
 const ALLOWED_COUNTRIES = []; // Deprecated, lifting restriction
 
-const Auth = ({ isModal = false, onClose, initialMode = 'login', initialRole = 'student' }) => {
+const Auth = ({ isModal = false, onClose, initialMode = 'login', initialRole = 'partner' }) => {
   const [mode, setMode] = useState(initialMode); // 'login', 'signup', 'forgot'
   const [role, setRole] = useState(initialRole); // 'student', 'partner'
   const [keepSignedIn, setKeepSignedIn] = useState(false);
@@ -373,11 +373,11 @@ const Auth = ({ isModal = false, onClose, initialMode = 'login', initialRole = '
           {/* ROLE SELECTOR ON SIGNUP */}
           {mode === 'signup' && (
             <div className="role-tabs animated-fade-in">
-              <button type="button" className={`role-tab ${role === 'student' ? 'active' : ''}`} onClick={() => setRole('student')}>
-                <User size={18} /> Student Registration
-              </button>
               <button type="button" className={`role-tab ${role === 'partner' ? 'active' : ''}`} onClick={() => setRole('partner')}>
                 <Briefcase size={18} /> Business Partner Registration
+              </button>
+              <button type="button" className={`role-tab ${role === 'student' ? 'active' : ''}`} onClick={() => setRole('student')}>
+                <User size={18} /> Student Registration
               </button>
             </div>
           )}
