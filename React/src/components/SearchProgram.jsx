@@ -111,7 +111,7 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
         setUniversitiesData(dataWithIds);
       } catch (err) {
         console.error("Error fetching universities:", err);
-        setError("Failed to load university data. Please check the App Script URL or your network connection.");
+        setError("Failed to load university data. Please ensure 'courses.xlsx' is placed in the backend folder.");
         setUniversitiesData(sampleSheetData); // Fallback to sample on error
       } finally {
         setIsLoading(false);
