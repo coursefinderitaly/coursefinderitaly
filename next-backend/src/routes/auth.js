@@ -96,8 +96,8 @@ router.post('/login', async (req, res) => {
     // Set token as HTTPOnly Session Cookie (no maxAge = clears when browser closes)
     res.cookie('token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax'
+      secure: true, 
+      sameSite: 'None'
     });
     
     res.json({ message: "Logged in successfully", user: { email: user.email, phone: user.phone, role: user.role } });
@@ -214,8 +214,8 @@ router.post('/partner-request', async (req, res) => {
 router.post('/logout', (req, res) => {
   res.clearCookie('token', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Lax'
+    secure: true,
+    sameSite: 'None'
   });
   res.json({ message: "Logged out successfully" });
 });
