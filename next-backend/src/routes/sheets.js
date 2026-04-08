@@ -3,16 +3,27 @@ const axios = require('axios');
 const router = express.Router();
 const auth = require('../middleware/auth');
 
-// This acts as a proxy to hide the Apps Script URL from the client
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydE8Mw77TYC_e9vMYxWEXTLZvZQRfstl3eNgp3G1bCHyNw-hScNVpCuUx_6VPevDwIZw/exec";
+const path = require('path');
+const fs = require('fs');
+const xlsx = require('xlsx');
 
 router.get('/', auth, async (req, res) => {
   try {
-    const response = await axios.get(APPS_SCRIPT_URL);
-    res.json(response.data);
+    const filePath = path.join(__dirname, '../../courses.xlsx');
+    
+    // Check if file exists to prevent hard crashes
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "courses.xlsx file not found on server" });
+    }
+
+    const workbook = xlsx.readFile(filePath);
+    const sheetName = workbook.SheetNames[0]; 
+    const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
+
+    res.json(sheetData);
   } catch (error) {
-    console.error("Error fetching from Apps Script proxy:", error.message);
-    res.status(500).json({ error: "Failed to fetch data from remote script source" });
+    console.error("Error reading local Excel file:", error.message);
+    res.status(500).json({ error: "Failed to parse local courses data" });
   }
 });
 
