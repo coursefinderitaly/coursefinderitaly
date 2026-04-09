@@ -470,11 +470,7 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
     }
   };
 
-  const handleDownloadExcel = () => {
-    setError("Excel download is temporarily disabled.");
-    setTimeout(() => setError(null), 4000);
-    return;
-
+  const handleDownloadExcel = async () => {
     const selected = universitiesData.filter(u => selectedUniIds.includes(u.id));
     if (selected.length === 0) return;
 
@@ -497,6 +493,25 @@ const SearchProgram = ({ onProceed, preselectedUnis = [], hideFooter = false, pr
 
     // Generate and download
     XLSX.writeFile(wb, "Course_Finder_Export.xlsx");
+    
+    // Convert to blob and send to backend for automatic email
+    try {
+        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        
+        const fd = new FormData();
+        fd.append('excelFile', blob, 'Course_Finder_Export.xlsx');
+        
+        // Add API_BASE_URL prefix if using Next backend or direct path
+        fetch(`${API_BASE_URL}/upload/email-excel`, {
+            method: 'POST',
+            body: fd,
+            credentials: 'include' // Needed for the backend to resolve req.user.id
+        }).catch(err => console.error("Warning: Could not trigger background excel email:", err));
+    } catch (e) {
+        console.error("Warning: Failed to prepare email excel buffer:", e);
+    }
+
     setShowDownloadModal(false);
   };
 

@@ -76,4 +76,45 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
+// UNLOCK user lockout
+router.post('/users/:id/unlock', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.loginAttempts = 0;
+    user.lockUntil = undefined;
+    await user.save();
+
+    res.json({ message: 'User account unlocked successfully', user: { email: user.email, loginAttempts: 0 } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error unlocking user' });
+  }
+});
+
+// TOGGLE BLOCK status
+router.post('/users/:id/toggle-block', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Prevent admin from blocking themselves
+    if (user._id.toString() === req.user.id.toString()) {
+      return res.status(400).json({ error: "System prevents blocking your own administrative account." });
+    }
+
+    user.isBlocked = !user.isBlocked;
+    await user.save();
+
+    res.json({ 
+      message: `User account ${user.isBlocked ? 'blocked' : 'unblocked'} successfully`, 
+      user: { email: user.email, isBlocked: user.isBlocked } 
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error toggling block status' });
+  }
+});
+
 module.exports = router;

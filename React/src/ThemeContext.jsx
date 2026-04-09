@@ -6,11 +6,11 @@ export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // Sync with user's system preference by default
-    return localStorage.getItem('app-theme') || 'system';
+    // Default to dark mode if no preference is saved
+    return localStorage.getItem('app-theme') || 'dark';
   });
 
-  const [activeTheme, setActiveTheme] = useState('light'); // 'light' or 'dark'
+  const [activeTheme, setActiveTheme] = useState('dark'); // Default to dark on first mount
 
   useEffect(() => {
     const applyTheme = () => {

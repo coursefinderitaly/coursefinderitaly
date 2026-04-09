@@ -454,6 +454,13 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
         </div>
       )}
 
+      {showNoDocsError && (
+        <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid #ef4444', color: '#dc2626', padding: '12px 20px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 900, animation: 'shake 0.5s ease', display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+          <AlertTriangle size={24} />
+          <span>CRITICAL ACTION REQUIRED: You must select and attach at least one document before you can proceed to the final submission review.</span>
+        </div>
+      )}
+
       {/* Tabs Content */}
       <div className="tab-content" style={{ paddingBottom: '40px' }}>
         <div style={{ display: activeTab === 'profile' ? 'block' : 'none' }}>
@@ -1272,12 +1279,6 @@ const StudentDetails = ({ student, goBack, pendingApplications = [], setPendingA
         </div>
         <div style={{ display: activeTab === 'documents' ? 'block' : 'none' }}>
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
-            {showNoDocsError && (
-              <div style={{ background: 'rgba(239, 68, 68, 0.05)', border: '1px solid #ef4444', color: '#dc2626', padding: '12px 20px', borderRadius: '12px', fontSize: '1.05rem', fontWeight: 900, animation: 'shake 0.5s ease', display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
-                <AlertTriangle size={24} />
-                <span>CRITICAL ACTION REQUIRED: You must select and attach at least one document before you can proceed to the final submission review.</span>
-              </div>
-            )}
             <DocumentUpload profile={formData} setMessage={setMessage} ref={documentUploadRef} />
             {/* Actions */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '30px' }}>

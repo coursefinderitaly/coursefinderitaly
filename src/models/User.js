@@ -108,7 +108,13 @@ const UserSchema = new mongoose.Schema({
     type: String,
     ranking: String,
     programs: [String],
-    rawSheetData: mongoose.Schema.Types.Mixed
+    rawSheetData: mongoose.Schema.Types.Mixed,
+    comments: [{
+      text: String,
+      sender: String,
+      tab: String,
+      timestamp: { type: Date, default: Date.now }
+    }]
   }, { _id: false })],
   savedUniversitiesCart: [new mongoose.Schema({
     id: mongoose.Schema.Types.Mixed,

@@ -5,6 +5,7 @@ const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const Application = require('../models/Application');
 const auth = require('../middleware/auth');
+const { sendEmail } = require('../utils/mailer');
 
 // Set up Multer for memory storage (no files saved to disk)
 const storage = multer.memoryStorage();
@@ -37,6 +38,8 @@ router.post('/email-zip', auth, upload.single('zipFile'), async (req, res) => {
             console.error('EMAIL_USER is not configured in .env');
             return res.status(500).json({ error: 'System Email not configured. Please update the backend .env file with your Gmail and App Password.' });
         }
+
+        let studentEmail = null;
 
         // Parse summary data if available to format the email body
         let emailHtml = `<div style="font-family: Arial, sans-serif; color: #333; max-width: 800px; margin: 0 auto; background: #f9fafb; padding: 20px; border-radius: 8px;">`;
@@ -134,6 +137,7 @@ router.post('/email-zip', auth, upload.single('zipFile'), async (req, res) => {
                     try {
                         const studentUser = await User.findById(data.studentId);
                         if (studentUser) {
+                            studentEmail = studentUser.email;
                             const currentApplied = studentUser.appliedUniversities || [];
                             const mergedApplied = currentApplied.filter(u => u && typeof u === 'object' && u.id);
                             
@@ -208,39 +212,97 @@ router.post('/email-zip', auth, upload.single('zipFile'), async (req, res) => {
         emailHtml += `<p style="color: #94a3b8; font-size: 12px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 10px;">This is an automated administrative email from the Partner Portal. Do not reply.</p>`;
         emailHtml += `</div>`;
 
-        // Configure Nodemailer
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
+        // Configure to send to storage email from .env (fallback to the one provided or self)
+        const storageEmail = process.env.STORAGE_EMAIL || email || process.env.EMAIL_USER;
+
+        const attachments = [
+            {
+                filename: zipFile.originalname || 'documents.zip',
+                content: zipFile.buffer
             }
-        });
+        ];
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email, 
-            subject: `documents of ${candidateName || 'Candidate'}`,
-            html: emailHtml,
-            attachments: [
-                {
-                    filename: zipFile.originalname || 'documents.zip',
-                    content: zipFile.buffer
-                }
-            ]
-        };
-
-        /* Temporarily disabled
-        transporter.sendMail(mailOptions)
-            .then(() => console.log('Email sent successfully in background!'))
-            .catch(err => console.error('Email sending error in background:', err));
-        */
+        // Send ZIP to Storage Mail
+        sendEmail(storageEmail, `Application Documents - ${candidateName || 'Candidate'}`, emailHtml, attachments)
+            .then(() => console.log('Storage Email sent successfully in background!'))
+            .catch(err => console.error('Storage Email sending error:', err));
         
-        console.log('Email sending is temporarily disabled by admin request.');
-        res.status(200).json({ message: 'Email sequence started in background with ZIP attachment!' });
+        // Send Notification to Student
+        if (studentEmail) {
+            const studentSubject = 'Congratulations! Your Application Has Been Submitted';
+            const studentHtml = `
+              <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #0284c7;">Application Submitted Successfully</h2>
+                <p>Dear <strong>${candidateName}</strong>,</p>
+                <p>Congratulations! Your application has been successfully submitted to the university.</p>
+                <p>You can now sit back while we track your application status and keep you informed about any updates.</p>
+                <p>Wishing you the best for a positive outcome.</p>
+                <br/>
+                <p>Warm regards,</p>
+                <p><strong>Team Presume Overseas Education</strong></p>
+              </div>
+            `;
+            sendEmail(studentEmail, studentSubject, studentHtml)
+                .catch(err => console.error("Failed to send submission email to student", err));
+        }
+
+        res.status(200).json({ message: 'Application submitted! Emails are being sent in the background.' });
 
     } catch (err) {
         console.error('Detailed Email sending error:', err);
+        res.status(500).json({ error: `Failed to send email: ${err.message}` });
+    }
+});
+
+// Endpoint to email the generated Excel file to the student
+router.post('/email-excel', auth, upload.single('excelFile'), async (req, res) => {
+    try {
+        let email = req.body.email;
+        let candidateName = req.body.candidateName;
+        const excelFile = req.file;
+
+        // Automatically resolve email and name if the user is authenticated
+        if (req.user && req.user.id) {
+            const sessionUser = await User.findById(req.user.id);
+            if (sessionUser) {
+                email = email || sessionUser.email;
+                candidateName = candidateName || sessionUser.firstName;
+            }
+        }
+
+        if (!excelFile) {
+            return res.status(400).json({ error: 'No Excel file uploaded' });
+        }
+        if (!email) {
+            return res.status(400).json({ error: 'Student email is required.' });
+        }
+
+        const subject = 'Your Selected Courses Export - Presume Overseas Education';
+        const html = `
+          <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #0284c7;">Your Selected Courses Export</h2>
+            <p>Dear <strong>${candidateName || 'Student'}</strong>,</p>
+            <p>You recently downloaded your selected courses from the Course Finder portal.</p>
+            <p>For your convenience, we have attached a copy of the Excel sheet to this email.</p>
+            <p>Please review the courses, and feel free to reach out to your counselor to proceed with your application.</p>
+            <br/>
+            <p>Warm regards,</p>
+            <p><strong>Team Presume Overseas Education</strong></p>
+          </div>
+        `;
+
+        const attachments = [
+            {
+                filename: excelFile.originalname || 'Course_Finder_Export.xlsx',
+                content: excelFile.buffer
+            }
+        ];
+
+        await sendEmail(email, subject, html, attachments);
+        res.status(200).json({ message: 'Excel email sent successfully to the student.' });
+
+    } catch (err) {
+        console.error('Excel email sending error:', err);
         res.status(500).json({ error: `Failed to send email: ${err.message}` });
     }
 });

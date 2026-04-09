@@ -1,5 +1,123 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Clock, PlusCircle, Users, FileText, ArrowRight } from 'lucide-react';
+import { Activity, Clock, FileText, Users, AlertTriangle } from 'lucide-react';
+
+const IMPORTANT_NOTIFICATIONS = [
+  {
+    icon: '🔐',
+    title: 'Account Security',
+    message: 'Your portal account is protected. Never share your login credentials with anyone, including support staff.',
+  },
+  {
+    icon: '📋',
+    title: 'Application Processing Times',
+    message: 'All submitted applications are currently being processed. Allow up to 48 business hours for status updates.',
+  },
+  {
+    icon: '📄',
+    title: 'Document Submission',
+    message: 'Ensure all uploaded documents are clear, valid, and not expired. Incomplete submissions may cause delays.',
+  },
+  {
+    icon: '🌐',
+    title: 'University Intake Deadlines',
+    message: 'September 2026 intake deadlines are approaching. Please finalise course selections and documents promptly.',
+  },
+];
+
+const ImportantNotifications = () => {
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex(prev => (prev + 1) % IMPORTANT_NOTIFICATIONS.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const note = IMPORTANT_NOTIFICATIONS[activeIndex];
+
+  return (
+    <>
+      <style>{`
+        @keyframes gradientShift {
+          0%   { background-position: 0% 50%; }
+          50%  { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes noteFade {
+          0%   { opacity: 0; transform: translateY(6px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .imp-notif-wrap {
+          position: relative;
+          padding: 3px;
+          border-radius: 16px;
+          background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899, #3b82f6);
+          background-size: 300% 300%;
+          animation: gradientShift 5s ease infinite;
+        }
+        .imp-notif-inner {
+          background: var(--bg-secondary);
+          border-radius: 13px;
+          padding: 24px;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          box-sizing: border-box;
+        }
+      `}</style>
+      <div className="imp-notif-wrap">
+        <div className="imp-notif-inner">
+
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <AlertTriangle size={18} style={{ color: '#f59e0b', flexShrink: 0 }} />
+            <h3 style={{ margin: 0, border: 'none', padding: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-main)' }}>
+              Important Notices
+            </h3>
+            <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase' }}>
+              {activeIndex + 1} / {IMPORTANT_NOTIFICATIONS.length}
+            </span>
+          </div>
+
+          {/* Notification body */}
+          <div key={activeIndex} style={{ animation: 'noteFade 0.45s ease forwards', flex: 1 }}>
+            <div style={{ fontSize: '2rem', marginBottom: '10px' }}>{note.icon}</div>
+            <p style={{ margin: '0 0 8px 0', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+              {note.title}
+            </p>
+            <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.65 }}>
+              {note.message}
+            </p>
+          </div>
+
+          {/* Dot indicators */}
+          <div style={{ display: 'flex', gap: '6px', paddingTop: '4px' }}>
+            {IMPORTANT_NOTIFICATIONS.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveIndex(idx)}
+                style={{
+                  width: idx === activeIndex ? '22px' : '8px',
+                  height: '8px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: idx === activeIndex ? '#8b5cf6' : 'var(--glass-border)',
+                  cursor: 'pointer',
+                  padding: 0,
+                  transition: 'all 0.35s ease',
+                  outline: 'none',
+                }}
+              />
+            ))}
+          </div>
+
+        </div>
+      </div>
+    </>
+  );
+};
 
 const DashboardHome = ({ isPartner, profile, setActiveTab, stats, fetchStats, setPendingApplications }) => {
   useEffect(() => {
@@ -25,11 +143,11 @@ const DashboardHome = ({ isPartner, profile, setActiveTab, stats, fetchStats, se
         </div>
 
         {isPartner && (
-            <div className="widget metric-card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-              <h3>Total Counselors</h3>
-              <div className="metric" style={{ justifyContent: 'center' }}>{stats.totalCounselors || 0}</div>
-              <p className="text-muted" style={{fontSize: '0.8rem', marginTop: '5px'}}>Active sub-accounts</p>
-            </div>
+          <div className="widget metric-card" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+            <h3>Total Counselors</h3>
+            <div className="metric" style={{ justifyContent: 'center' }}>{stats.totalCounselors || 0}</div>
+            <p className="text-muted" style={{fontSize: '0.8rem', marginTop: '5px'}}>Active sub-accounts</p>
+          </div>
         )}
 
         {isPartner ? (
@@ -71,10 +189,8 @@ const DashboardHome = ({ isPartner, profile, setActiveTab, stats, fetchStats, se
             <h3>Active Applications</h3>
             <div className="metric" style={{ justifyContent: 'center' }}>{profile.appliedUniversities ? profile.appliedUniversities.filter(u => u && typeof u === 'object' && u.id).length : 0}</div>
             <p className="text-muted" style={{fontSize: '0.8rem', marginTop: '5px'}}>Based on your final submissions</p>
-            <div style={{ position: 'absolute', top: '25px', right: '25px', color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold' }}></div>
           </div>
         )}
-
       </div>
 
       {/* Main Dashboard Content Layout */}
@@ -83,7 +199,10 @@ const DashboardHome = ({ isPartner, profile, setActiveTab, stats, fetchStats, se
         {/* Recent Activity Timeline */}
         <div className="widget profile-card" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0, border: 'none', padding: 0 }}><Activity size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: '-3px' }}/> Recent Activity</h3>
+            <h3 style={{ margin: 0, border: 'none', padding: 0 }}>
+              <Activity size={18} style={{ display: 'inline', marginRight: '8px', verticalAlign: '-3px' }}/>
+              Recent Activity
+            </h3>
             <span onClick={() => setActiveTab('notifications')} style={{ fontSize: '0.8rem', color: 'var(--accent-secondary)', cursor: 'pointer' }}>View All</span>
           </div>
           
@@ -119,59 +238,8 @@ const DashboardHome = ({ isPartner, profile, setActiveTab, stats, fetchStats, se
           </div>
         </div>
 
-        {/* Quick Actions Panel */}
-        <div className="widget profile-card" style={{ padding: '24px' }}>
-          <h3 style={{ margin: '0 0 20px 0', border: 'none', padding: 0 }}>⚡ Quick Actions</h3>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {(isPartner || profile.role === 'counselor') && (
-              <button 
-                onClick={() => setActiveTab('register-student')}
-                style={{ background: 'var(--input-bg)', border: '1px solid var(--glass-border)', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-main)', transition: 'all 0.2s' }}
-                onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.transform = 'translateY(0)' }}
-              >
-                <PlusCircle size={24} style={{ color: 'var(--accent-primary)' }}/>
-                <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>Register Student</span>
-              </button>
-            )}
-
-            <button 
-              onClick={() => {
-                setPendingApplications([]);
-                setActiveTab('course-finder');
-              }}
-              style={{ background: 'var(--input-bg)', border: '1px solid var(--glass-border)', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-main)', transition: 'all 0.2s' }}
-              onMouseOver={(e) => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-              onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.transform = 'translateY(0)' }}
-            >
-              <FileText size={24} style={{ color: '#8b5cf6' }}/>
-              <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>Explore Courses</span>
-            </button>
-
-            {(isPartner || profile.role === 'counselor') && (
-              <button 
-                onClick={() => setActiveTab('students-list')}
-                style={{ background: 'var(--input-bg)', border: '1px solid var(--glass-border)', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-main)', transition: 'all 0.2s' }}
-                onMouseOver={(e) => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.transform = 'translateY(0)' }}
-              >
-                <Users size={24} style={{ color: '#10b981' }}/>
-                <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>Manage Students</span>
-              </button>
-            )}
-
-            <button 
-              onClick={() => setActiveTab('learning')}
-              style={{ background: 'var(--input-bg)', border: '1px solid var(--glass-border)', padding: '16px', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'var(--text-main)', transition: 'all 0.2s' }}
-              onMouseOver={(e) => { e.currentTarget.style.borderColor = '#e879f9'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-              onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--glass-border)'; e.currentTarget.style.transform = 'translateY(0)' }}
-            >
-              <ArrowRight size={24} style={{ color: '#e879f9' }}/>
-              <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>Learning Resources</span>
-            </button>
-          </div>
-        </div>
+        {/* Important Notifications Card */}
+        <ImportantNotifications />
 
       </div>
 

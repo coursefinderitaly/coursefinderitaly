@@ -5,6 +5,7 @@ const User = require('../models/User');
 const nodemailer = require('nodemailer');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const { sendEmail } = require('../utils/mailer');
 
 // 1. SIGNUP ROUTE
 router.post('/signup', async (req, res) => {
@@ -40,6 +41,26 @@ router.post('/signup', async (req, res) => {
     });
     await newUser.save();
     
+    // Send Welcome Email if user is a student
+    if (newUser.role === 'student' && email) {
+      const subject = 'Welcome to Presume Overseas Education – Let’s Begin Your Journey';
+      const html = `
+        <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #0284c7;">Welcome to Presume Overseas Education!</h2>
+          <p>Dear <strong>${firstName} ${lastName || ''}</strong>,</p>
+          <p>Thank you for registering with Presume Overseas Education. We are excited to assist you in your journey toward studying abroad.</p>
+          <p>Our team will guide you through every step — from selecting the right course and university to securing your visa.</p>
+          <p>You can now proceed to explore courses and begin your profile assessment.</p>
+          <p>If you have any queries, feel free to reach out to us.</p>
+          <br/>
+          <p>Warm regards,</p>
+          <p><strong>Team Presume Overseas Education</strong></p>
+        </div>
+      `;
+      // Send asynchronously without awaiting to not block the request
+      sendEmail(email, subject, html).catch(err => console.error("Welcome email failed", err));
+    }
+
     res.status(201).json({ message: "User created successfully" });
   } catch (err) {
     console.error(err);
@@ -58,6 +79,11 @@ router.post('/login', async (req, res) => {
     });
     
     if (!user) return res.status(400).json({ error: "User not found" });
+    
+    // Enforce Block Status
+    if (user.isBlocked) {
+      return res.status(403).json({ error: "Your account has been suspended. Please contact support." });
+    }
 
     // Enforce Account Intrusion Soft-Locks
     if (user.lockUntil && user.lockUntil > Date.now()) {

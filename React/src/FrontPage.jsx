@@ -91,7 +91,7 @@ const FrontPage = () => {
                     viewport={{ once: true }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                 >
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         whileInView={{ opacity: 1, scale: 1 }}
                         viewport={{ once: true }}
@@ -104,10 +104,20 @@ const FrontPage = () => {
                         Course Finder <span className="title-gradient">Italy</span>
                     </h1>
                     <p className="main-subtitle">
-                        A powerful, all‑in‑one management platform for educational consultants
-                        and students traveling to Italy. Streamline workflows, manage
-                        applications, and track success with precision.
+                        All-in-one CRM for study abroad consultants & students heading to Italy.
                     </p>
+
+                    <div className="hero-benefits-container">
+                        <div className="hero-benefits-title">Benefits in Italy Education</div>
+                        <div className="hero-benefits-grid">
+                            <div className="hero-benefit-item"><span className="hero-benefit-icon">🎓</span> 100% Scholarship</div>
+                            <div className="hero-benefit-item"><span className="hero-benefit-icon">🏢</span> Free Tuition Fee</div>
+                            <div className="hero-benefit-item"><span className="hero-benefit-icon">💶</span> Monthly Living Allowance</div>
+                            <div className="hero-benefit-item"><span className="hero-benefit-icon">🇮🇹</span> Pre-Enrollment Support</div>
+                            <div className="hero-benefit-item"><span className="hero-benefit-icon">✅</span> High Visa Success</div>
+                            <div className="hero-benefit-item"><span className="hero-benefit-icon">🌍</span> Top Tier Universities</div>
+                        </div>
+                    </div>
                 </motion.section>
 
                 {/* DASHBOARD GALLERY */}
@@ -124,7 +134,9 @@ const FrontPage = () => {
                     <DashGallery />
                 </motion.section>
 
-                <ModernFeatures openAuth={openAuth} />
+                <div style={{ marginTop: '20px', width: '100%' }}>
+                    <ModernFeatures openAuth={openAuth} />
+                </div>
             </main>
 
             {/* ── FOOTER ── */}
@@ -140,7 +152,7 @@ const FrontPage = () => {
                         <div className="front-logo-wrap footer-logo-wrap">
                             <img src="/logo.png" alt="CounselFlow Logo" className="front-logo" />
                         </div>
-                        <p>Simplifying study abroad applications from start to finish.</p>
+                        <p>Simplifying study abroad applications platform.</p>
                     </div>
                     <div className="footer-links-group">
                         <div className="footer-col">

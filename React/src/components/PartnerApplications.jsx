@@ -4,10 +4,12 @@ import {
   CheckCircle, Phone, Filter, Mail, List, Calendar, Briefcase, Clock
 } from 'lucide-react';
 import { API_BASE_URL } from '../config';
+import ApplicationTracking from './ApplicationTracking';
 
 const PartnerApplications = ({ profile, setMessage }) => {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedApp, setSelectedApp] = useState(null);
 
   // Filter States
   const [searchTerm, setSearchTerm] = useState(''); // University search
@@ -109,6 +111,20 @@ const PartnerApplications = ({ profile, setMessage }) => {
       <Clock size={12} /> {status}
     </span>
   );
+
+  if (selectedApp) {
+    const studentForApp = students.find(s => s._id === selectedApp.studentId);
+    const studentApps = (studentForApp?.appliedUniversities || []).filter(u => u && typeof u === 'object' && u.id);
+    return (
+      <ApplicationTracking
+        student={studentForApp}
+        applications={studentApps}
+        initialSelectedAppId={selectedApp.id}
+        onBack={() => setSelectedApp(null)}
+        isPortalAdmin={true}
+      />
+    );
+  }
 
   return (
     <div className="view-standard" style={{ animation: 'fadeIn 0.4s ease-out' }}>
@@ -233,11 +249,16 @@ const PartnerApplications = ({ profile, setMessage }) => {
                   </tr>
                 ) : (
                   filteredApplications.map((app, idx) => (
-                    <tr key={idx} style={{ 
-                      transition: 'background 0.2s', 
-                      background: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent',
-                      cursor: 'default'
-                    }} className="hover-row">
+                    <tr 
+                      key={idx} 
+                      onClick={() => setSelectedApp(app)}
+                      style={{ 
+                        transition: 'background 0.2s', 
+                        background: idx % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent',
+                        cursor: 'pointer'
+                      }} 
+                      className="hover-row"
+                    >
                       <td style={{ padding: '18px 20px', borderBottom: '1px solid var(--glass-border)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                           <span style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '0.95rem' }}>{app.studentName}</span>

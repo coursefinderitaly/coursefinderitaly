@@ -1,8 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Building, MapPin, GraduationCap, CheckSquare, FileText, Search, Filter, Clock } from 'lucide-react';
+import ApplicationTracking from './ApplicationTracking';
 
 const AppliedUniversities = ({ profile }) => {
   const appliedUniversities = (profile?.appliedUniversities || []).filter(u => u && typeof u === 'object' && u.id);
+
+  const [selectedApp, setSelectedApp] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
@@ -28,6 +31,17 @@ const AppliedUniversities = ({ profile }) => {
       return true;
     });
   }, [appliedUniversities, searchTerm, locationFilter, levelFilter]);
+
+  if (selectedApp) {
+    return (
+      <ApplicationTracking 
+        student={profile} 
+        applications={appliedUniversities} 
+        initialSelectedAppId={selectedApp.id} 
+        onBack={() => setSelectedApp(null)} 
+      />
+    );
+  }
 
   return (
     <div className="view-standard" style={{ animation: 'fadeIn 0.3s ease' }}>
@@ -102,7 +116,12 @@ const AppliedUniversities = ({ profile }) => {
               </div>
             ) : (
               filteredUniversities.map((uni, idx) => (
-                <div key={idx} className="widget hover:border-[var(--accent-secondary)]" style={{ display: 'flex', flexDirection: 'column', gap: '15px', padding: '20px', border: '1px solid var(--glass-border)', transition: 'all 0.2s ease', background: 'var(--bg-secondary)' }}>
+                <div 
+                  key={idx} 
+                  className="widget hover:border-[var(--accent-secondary)]" 
+                  onClick={() => setSelectedApp(uni)}
+                  style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '15px', padding: '20px', border: '1px solid var(--glass-border)', transition: 'all 0.2s ease', background: 'var(--bg-secondary)' }}
+                >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
                     <div style={{ flex: '1 1 auto' }}>
                       <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '10px' }}>

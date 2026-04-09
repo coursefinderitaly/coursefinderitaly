@@ -76,4 +76,21 @@ router.delete('/users/:id', async (req, res) => {
   }
 });
 
+// UNLOCK user lockout
+router.post('/users/:id/unlock', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    user.loginAttempts = 0;
+    user.lockUntil = undefined;
+    await user.save();
+
+    res.json({ message: 'User account unlocked successfully', user: { email: user.email, loginAttempts: 0 } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error unlocking user' });
+  }
+});
+
 module.exports = router;

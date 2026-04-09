@@ -227,7 +227,7 @@ router.get('/students', checkRole(['admin', 'partner', 'counselor']), async (req
 // Partner OR Counselor Register New Student Lead
 router.post('/students', checkRole(['admin', 'partner', 'counselor']), async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, country, state, city, offerStatus, assignedCounselor } = req.body;
+    const { firstName, lastName, email, phone, country, state, city, offerStatus, assignedCounselor, password } = req.body;
     
     // Debug log to trace phone saving
     console.log(`[ERP] Registering student: ${firstName} ${lastName}, Phone: ${phone}`);
@@ -235,13 +235,17 @@ router.post('/students', checkRole(['admin', 'partner', 'counselor']), async (re
     if (!phone || phone.trim() === '+91') {
        return res.status(400).json({ error: "Phone number is required." });
     }
+    
+    if (!password) {
+       return res.status(400).json({ error: "Initial password is required." });
+    }
 
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ error: "Student email already exists" });
 
     // Generate credentials
     const bcrypt = require('bcrypt');
-    const hashedPassword = await bcrypt.hash('StudentPass123!', 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
     
     const currentUser = await User.findById(req.user.id);
 
@@ -359,6 +363,55 @@ router.put('/students/:id/assign', checkRole(['admin', 'partner', 'counselor']),
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: "Failed to assign counselor" });
+  }
+});
+
+// Post a comment to a specific application / appliedUniversity
+router.post('/students/:studentId/applications/:appId/comments', async (req, res) => {
+  try {
+    const { studentId, appId } = req.params;
+    const { text, sender } = req.body;
+
+    if (!text) return res.status(400).json({ error: "Comment text is required." });
+
+    const student = await User.findById(studentId);
+    if (!student || student.role !== 'student') {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    // Optional Role check (so student can only post to their own, staff to accessible students)
+    if (req.user.role === 'student' && req.user.id !== studentId) {
+      return res.status(403).json({ error: "Unauthorized access to another student's applications" });
+    }
+
+    // Find the applied university inside the array
+    const appIndex = student.appliedUniversities.findIndex(a => String(a.id) === String(appId));
+    if (appIndex === -1) {
+      return res.status(404).json({ error: `Application (${appId}) not found within student profile.` });
+    }
+
+    // Ensure comments array exists
+    if (!student.appliedUniversities[appIndex].comments) {
+      student.appliedUniversities[appIndex].comments = [];
+    }
+
+    const newComment = {
+      text,
+      sender: sender || req.user.role, 
+      timestamp: new Date()
+    };
+
+    student.appliedUniversities[appIndex].comments.push(newComment);
+    
+    // Signal Mongoose that a Mixed or deeply nested sub-array was changed
+    student.markModified('appliedUniversities');
+    
+    await student.save();
+
+    res.status(201).json({ message: "Comment added successfully", comment: newComment });
+  } catch (err) {
+    console.error("[ERP ERROR] Posting comment:", err);
+    res.status(500).json({ error: "Failed to add comment." });
   }
 });
 

@@ -31,6 +31,7 @@ const RegisterStudent = ({ profile, setMessage }) => {
     lastName: '',
     email: '',
     phone: '+91 ',
+    password: '',
     assignedCounselor: null
   });
 
@@ -112,7 +113,7 @@ const RegisterStudent = ({ profile, setMessage }) => {
       if (response.ok) {
         setMessage({ text: 'Student registered successfully.', type: 'success' });
         setFormData({
-          firstName: '', lastName: '', email: '', phone: '+91 ', assignedCounselor: null
+          firstName: '', lastName: '', email: '', phone: '+91 ', password: '', assignedCounselor: null
         });
       } else {
         const data = await response.json();
@@ -148,6 +149,10 @@ const RegisterStudent = ({ profile, setMessage }) => {
           <div className="dash-input-group">
             <label>Email Address*</label>
             <input type="email" name="email" value={formData.email} onChange={handleChange} required className="dash-input" />
+          </div>
+          <div className="dash-input-group">
+            <label>Set Initial Password*</label>
+            <input type="text" name="password" value={formData.password} onChange={handleChange} required className="dash-input" placeholder="e.g. StudentPass123!" />
           </div>
           <div className="dash-input-group">
             <label>Phone Number *</label>

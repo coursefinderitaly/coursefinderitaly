@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { 
-    GraduationCap, BookOpen, Layers, Search, 
-    UploadCloud, CheckCircle, Save, Briefcase, 
-    Users, PieChart, Send, Download, Target, 
-    Globe, Star 
+import {
+    GraduationCap, BookOpen, Layers, Search,
+    UploadCloud, CheckCircle, Save, Briefcase,
+    Users, PieChart, Send, Download, Target,
+    Globe, Star
 } from 'lucide-react';
 import './ModernFeatures.css';
 
@@ -23,7 +23,7 @@ const studentFeatures = [
 // Full 8 Partner Features
 const partnerFeatures = [
     { icon: <PieChart size={16} />, title: "Partner Dashboard", desc: "Applications, active counsellors & offers.", color: "#f43f5e" },
-    { icon: <Target size={16} />, title: "Lead Management", desc: "Pipeline control: convert leads & track.", color: "#8b5cf6" },
+    { icon: <Target size={16} />, title: "Gmail Integration", desc: "unified students details.", color: "#8b5cf6" },
     { icon: <Users size={16} />, title: "Student Management", desc: "Filter students and track centrally.", color: "#3b82f6" },
     { icon: <Send size={16} />, title: "Track Submissions", desc: "Monitor submissions and offers sequentially.", color: "#10b981" },
     { icon: <Briefcase size={16} />, title: "Counselor Control", desc: "Assign workloads and track sub-accounts.", color: "#f59e0b" },
@@ -73,13 +73,13 @@ const TiltCard = ({ children, glowColor }) => {
 
     return (
         <motion.div
-            style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+            style={{ rotateX, rotateY }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
             className="tilt-card-wrapper"
         >
-            <div className="tilt-glow" style={{ background: `radial-gradient(circle at center, ${glowColor} 0%, transparent 60%)`}}></div>
-            <div className="tilt-card-content" style={{ transform: "translateZ(10px)" }}>
+            <div className="tilt-glow" style={{ background: `radial-gradient(circle at center, ${glowColor} 0%, transparent 60%)` }}></div>
+            <div className="tilt-card-content">
                 {children}
             </div>
         </motion.div>
@@ -101,13 +101,13 @@ const CompactFeatureItem = ({ feature }) => (
 const ModernFeatures = ({ openAuth }) => {
     return (
         <div className="modern-features-wrapper">
-            
+
             {/* Split Section: Students & Partners side-by-side */}
             <div className="features-container split-view-container">
                 <TiltCard glowColor="rgba(244, 63, 94, 0.25)">
                     <div className="split-card partner-card">
                         <div className="split-header">
-                            <div className="header-badge" style={{color: '#f43f5e', background: 'rgba(244, 63, 94, 0.1)'}}>
+                            <div className="header-badge" style={{ color: '#f43f5e', background: 'rgba(244, 63, 94, 0.1)' }}>
                                 <Briefcase size={16} />
                                 <span>For Partners</span>
                             </div>
@@ -123,7 +123,7 @@ const ModernFeatures = ({ openAuth }) => {
                 <TiltCard glowColor="rgba(59, 130, 246, 0.25)">
                     <div className="split-card student-card">
                         <div className="split-header">
-                            <div className="header-badge" style={{color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)'}}>
+                            <div className="header-badge" style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)' }}>
                                 <GraduationCap size={16} />
                                 <span>For Students</span>
                             </div>
@@ -140,17 +140,17 @@ const ModernFeatures = ({ openAuth }) => {
             {/* horizontal USP Grid */}
             <div className="features-container usp-container">
                 <div className="features-header usp-header-compact">
-                    <div className="header-badge" style={{color: '#eab308', background: 'rgba(234, 179, 8, 0.1)'}}>
+                    <div className="header-badge" style={{ color: '#eab308', background: 'rgba(234, 179, 8, 0.1)' }}>
                         <Star size={16} />
                         <span>Why Choose Us</span>
                     </div>
-                    <h2 className="modern-title" style={{marginBottom: '0.2rem'}}>The CounselFlow <span>Advantage</span></h2>
+                    <h2 className="modern-title" style={{ marginBottom: '0.2rem' }}>The CounselFlow <span>Advantage</span></h2>
                 </div>
-                
+
                 <div className="usp-horizontal-grid">
                     {uspFeatures.map((usp, i) => (
-                        <motion.div 
-                            key={i} 
+                        <motion.div
+                            key={i}
                             className="usp-grid-card"
                             initial={{ opacity: 0, y: 15 }}
                             whileInView={{ opacity: 1, y: 0 }}

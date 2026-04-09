@@ -108,7 +108,14 @@ const UserSchema = new mongoose.Schema({
     type: String,
     ranking: String,
     programs: [String],
-    rawSheetData: mongoose.Schema.Types.Mixed
+    rawSheetData: mongoose.Schema.Types.Mixed,
+    status: { type: String, default: 'Under Process' },
+    comments: [{
+      text: String,
+      sender: String,
+      tab: String,
+      timestamp: { type: Date, default: Date.now }
+    }]
   }, { _id: false })],
   savedUniversitiesCart: [new mongoose.Schema({
     id: mongoose.Schema.Types.Mixed,
@@ -127,7 +134,8 @@ const UserSchema = new mongoose.Schema({
   
   // Security & Lockout Mechanisms
   loginAttempts: { type: Number, default: 0 },
-  lockUntil: { type: Date }
+  lockUntil: { type: Date },
+  isBlocked: { type: Boolean, default: false }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);

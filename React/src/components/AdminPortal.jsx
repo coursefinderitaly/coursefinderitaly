@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users, Trash2, LogOut, ShieldAlert, Edit2, ChevronLeft, Save, Plus,
   MapPin, Phone, Briefcase, GraduationCap, Building2, UserCircle, KeyRound,
-  Database, Server, ShieldCheck, Mail, Sun, Moon, Monitor, Globe, FileText
+  Database, Server, ShieldCheck, Mail, Sun, Moon, Monitor, Globe, FileText, Unlock, Ban
 } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import { useTheme } from '../ThemeContext';
@@ -13,6 +13,7 @@ import StudentDetails from './StudentDetails';
 import SystemHierarchy from './SystemHierarchy';
 import PartnerDirectoryBrowser from './PartnerDirectoryBrowser';
 import SearchableSelect from './SearchableSelect';
+import ApplicationTracking from './ApplicationTracking';
 
 const AdminPortal = () => {
   const [users, setUsers] = useState([]);
@@ -30,6 +31,7 @@ const AdminPortal = () => {
   const [formData, setFormData] = useState({});
   const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, action: null, targetId: null });
   const [viewingStudentProfile, setViewingStudentProfile] = useState(null);
+  const [selectedApp, setSelectedApp] = useState(null);
 
   const navigate = useNavigate();
 
@@ -157,6 +159,42 @@ const AdminPortal = () => {
       }
     } catch (err) {
       setMessage({ text: 'Server error during deletion', type: 'error' });
+    }
+  };
+
+  const handleUnlockUser = async (id) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/users/${id}/unlock`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMessage({ text: data.message, type: 'success' });
+        fetchUsers(); // Refresh list to update UI
+      } else {
+        setMessage({ text: 'Failed to unlock user account', type: 'error' });
+      }
+    } catch (err) {
+      setMessage({ text: 'Server connection error', type: 'error' });
+    }
+  };
+
+  const handleToggleBlock = async (id) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/users/${id}/toggle-block`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessage({ text: data.message, type: 'success' });
+        fetchUsers(); // Refresh list to update UI
+      } else {
+        setMessage({ text: data.error || 'Failed to toggle block status', type: 'error' });
+      }
+    } catch (err) {
+      setMessage({ text: 'Server connection error', type: 'error' });
     }
   };
 
@@ -448,6 +486,23 @@ const AdminPortal = () => {
                           <button onClick={() => handleDeleteUser(u._id, u.role === 'admin')} disabled={u.role === 'admin'} style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '8px 12px', borderRadius: '8px', cursor: u.role === 'admin' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, opacity: u.role === 'admin' ? 0.3 : 1 }}>
                             <Trash2 size={14} /> Obliterate
                           </button>
+                          <button 
+                            onClick={() => handleToggleBlock(u._id)} 
+                            disabled={u.role === 'admin'}
+                            style={{ 
+                              background: u.isBlocked ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', 
+                              color: u.isBlocked ? '#10b981' : '#f59e0b', 
+                              border: `1px solid ${u.isBlocked ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`, 
+                              padding: '8px 12px', borderRadius: '8px', cursor: u.role === 'admin' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, opacity: u.role === 'admin' ? 0.3 : 1 
+                            }}
+                          >
+                            <Ban size={14} /> {u.isBlocked ? 'Unblock Account' : 'Block Assistant'}
+                          </button>
+                          {u.lockUntil && new Date(u.lockUntil) > new Date() && (
+                            <button onClick={() => handleUnlockUser(u._id)} style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+                              <Unlock size={14} /> Unlock Access
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -470,7 +525,21 @@ const AdminPortal = () => {
         {/* -------------------------------------------------------------------------------- */}
         {(!selectedUser && !isAdding && activeTab === 'applications') && (
            <div className="animate-fade-in">
-             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+             {selectedApp ? (() => {
+                const studentForApp = users.find(u => u._id === selectedApp.studentId);
+                const studentApps = (studentForApp?.appliedUniversities || []).filter(u => u && typeof u === 'object' && u.id);
+                return (
+                  <ApplicationTracking
+                    student={studentForApp}
+                    applications={studentApps}
+                    initialSelectedAppId={selectedApp.id}
+                    onBack={() => setSelectedApp(null)}
+                    isPortalAdmin={true}
+                  />
+                );
+             })() : (
+               <>
+                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ color: 'var(--text-main)', fontSize: '1.6rem', margin: '0 0 8px 0', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '15px' }}>
                   Global Applications Ledger
@@ -491,7 +560,12 @@ const AdminPortal = () => {
                 <div className="empty-state" style={{ padding: '50px', textAlign: 'center', color: 'var(--text-muted)' }}>No applications submitted yet.</div>
               ) : (
                 allApplications.map((app, idx) => (
-                  <div key={idx} className="widget hover:border-[var(--accent-secondary)]" style={{ padding: '20px', border: '1px solid var(--glass-border)', background: 'var(--card-bg-solid)', borderRadius: '12px', transition: 'all 0.2s ease' }}>
+                  <div 
+                    key={idx} 
+                    className="widget hover:border-[var(--accent-secondary)]" 
+                    onClick={() => setSelectedApp(app)}
+                    style={{ padding: '20px', border: '1px solid var(--glass-border)', background: 'var(--card-bg-solid)', borderRadius: '12px', transition: 'all 0.2s ease', cursor: 'pointer' }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '15px' }}>
                       <div style={{ flex: '1 1 auto' }}>
                         <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -531,6 +605,8 @@ const AdminPortal = () => {
                 ))
               )}
             </div>
+             </>
+             )}
            </div>
         )}
 
