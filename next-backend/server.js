@@ -7,20 +7,14 @@ const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
-const next = require('next');
-
-const dev = process.env.NODE_ENV !== 'production';
-const nextApp = next({ dev, dir: __dirname });
-const handle = nextApp.getRequestHandler();
 
 const PORT = process.env.PORT || 5000;
 
-nextApp.prepare().then(async () => {
+async function startServer() {
   const app = express();
-  
+
   // Trust proxy for Render/Cloud platforms
   app.set('trust proxy', 1);
-
 
   // CORS Configuration
   const allowedOrigins = [
@@ -32,17 +26,16 @@ nextApp.prepare().then(async () => {
 
   app.use(cors({
     origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
+      // Allow requests with no origin (mobile apps, curl, etc.)
       if (!origin) return callback(null, true);
       if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('coursefinderitaly.com')) {
         return callback(null, true);
       }
-      return callback(null, true); // Fallback: allow all for now to fix Hostinger login loop
+      return callback(null, true); // Allow all for now
     },
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'x-csrf-protected', 'x-auth-token']
   }));
-
 
   // Security Middleware
   app.use(helmet({
@@ -109,13 +102,13 @@ nextApp.prepare().then(async () => {
 
   // Connect to MongoDB
   if (!process.env.MONGO_URI) {
-    console.error("FATAL ERROR: MONGO_URI is completely undefined.");
+    console.error('FATAL ERROR: MONGO_URI is not defined in environment variables.');
   }
 
   try {
     await mongoose.connect(process.env.MONGO_URI || '', { serverSelectionTimeoutMS: 5000 });
     console.log('Connected to database');
-    
+
     // Auto-seed Initial Admin User
     try {
       const User = require('./src/models/User');
@@ -140,12 +133,13 @@ nextApp.prepare().then(async () => {
     try {
       await mongoose.connection.collection('users').dropIndex('username_1');
       console.log('Stale username index dropped.');
-    } catch (e) { /* index may not exist */ }
+    } catch (e) { /* index may not exist — safe to ignore */ }
+
   } catch (err) {
     console.log('Database connection error:', err);
   }
 
-  // Route setup — these are your original CommonJS Express routers
+  // ── API Routes ──
   app.use('/api/auth', require('./src/routes/auth'));
   app.use('/api/erp', require('./src/routes/erp'));
   app.use('/api/upload', require('./src/routes/upload'));
@@ -153,34 +147,34 @@ nextApp.prepare().then(async () => {
   app.use('/api/admin', require('./src/routes/admin'));
   app.use('/api/sheets', require('./src/routes/sheets'));
 
-  // Visitor analytics routes (public track + admin view)
+  // Visitor analytics — rate-limit the public /track endpoint
   const visitorTrackLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 5, // max 5 tracking pings per IP per minute
+    windowMs: 60 * 1000, // 1 minute window
+    max: 5,              // max 5 pings per IP per minute
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => false,
   });
   app.use('/api/visitors/track', visitorTrackLimiter);
   app.use('/api/visitors', require('./src/routes/visitors'));
-  
-  // Health check route
+
+  // Health check
   app.get('/api/health', (req, res) => {
     res.json({ status: 'up', db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
   });
 
-
-  // Serve static React Frontend builds
+  // ── Serve React Frontend (Vite build) ──
   app.use(express.static(path.join(__dirname, '../React/dist')));
 
-  // SPA Catch-all: Route all non-API requests to the React index.html
+  // SPA Catch-all: send all non-API requests to React's index.html
   app.get(/^\/(?!api).*/, (req, res) => {
     res.sendFile(path.join(__dirname, '../React/dist/index.html'));
   });
 
-  // Start server
+  // Start listening
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}).catch(err => {
-  console.error('Failed to start Next.js server:', err);
+}
+
+startServer().catch(err => {
+  console.error('Failed to start server:', err);
   process.exit(1);
 });
