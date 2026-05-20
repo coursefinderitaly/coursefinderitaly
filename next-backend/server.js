@@ -152,6 +152,17 @@ nextApp.prepare().then(async () => {
   app.use('/api/send-student-docs', require('./src/routes/studentDocs'));
   app.use('/api/admin', require('./src/routes/admin'));
   app.use('/api/sheets', require('./src/routes/sheets'));
+
+  // Visitor analytics routes (public track + admin view)
+  const visitorTrackLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 5, // max 5 tracking pings per IP per minute
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: () => false,
+  });
+  app.use('/api/visitors/track', visitorTrackLimiter);
+  app.use('/api/visitors', require('./src/routes/visitors'));
   
   // Health check route
   app.get('/api/health', (req, res) => {

@@ -240,6 +240,21 @@ const FrontPage = () => {
             .catch(() => setIsLoggedIn(false));
     }, []);
 
+    // Silent visitor tracking — fire-and-forget, never blocks the page
+    useEffect(() => {
+        try {
+            fetch(`${API_BASE_URL}/visitors/track`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-csrf-protected': '1' },
+                body: JSON.stringify({
+                    referrer: document.referrer || 'Direct',
+                    page: window.location.pathname || '/',
+                }),
+                keepalive: true,
+            }).catch(() => {}); // silently ignore any network errors
+        } catch (_) {}
+    }, []);
+
     // Scroll reset on mount
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'instant' });

@@ -4,7 +4,7 @@ import {
   Users, Trash2, LogOut, ShieldAlert, Edit2, ChevronLeft, Save, Plus,
   MapPin, Phone, Briefcase, GraduationCap, Building2, UserCircle, KeyRound,
   Database, Server, ShieldCheck, Mail, Sun, Moon, Monitor, Globe, FileText, Unlock, Ban,
-  MessageSquare, Send, X, AlertTriangle, Search
+  MessageSquare, Send, X, AlertTriangle, Search, Globe2, Activity, Smartphone, RefreshCw
 } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import { useTheme } from '../ThemeContext';
@@ -40,6 +40,13 @@ const AdminPortal = () => {
   const [documentSearchTerm, setDocumentSearchTerm] = useState('');
   const [chatSearchTerm, setChatSearchTerm] = useState('');
   const [docDeleteConfirm, setDocDeleteConfirm] = useState({ isOpen: false, filename: null });
+
+  // Visitor Analytics state
+  const [visitors, setVisitors] = useState([]);
+  const [visitorStats, setVisitorStats] = useState({ total: 0, todayCount: 0, weekCount: 0, monthCount: 0 });
+  const [visitorsLoading, setVisitorsLoading] = useState(false);
+  const [visitorSearch, setVisitorSearch] = useState('');
+  const [visitorClearConfirm, setVisitorClearConfirm] = useState(false);
   const [chatClearConfirm, setChatClearConfirm] = useState({ isOpen: false, studentId: null, studentName: '' });
 
   // Chat state
@@ -207,6 +214,38 @@ const AdminPortal = () => {
       fetchUsers();
     } catch (err) {
       navigate('/');
+    }
+  };
+
+  const fetchVisitors = async () => {
+    setVisitorsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/visitors?limit=200`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setVisitors(data.visitors || []);
+        setVisitorStats({ total: data.total || 0, todayCount: data.todayCount || 0, weekCount: data.weekCount || 0, monthCount: data.monthCount || 0 });
+      }
+    } catch (err) {
+      console.error('[fetchVisitors]', err);
+    }
+    setVisitorsLoading(false);
+  };
+
+  const clearVisitorLogs = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/visitors/clear`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'x-csrf-protected': '1' }
+      });
+      if (res.ok) {
+        setVisitors([]);
+        setVisitorStats({ total: 0, todayCount: 0, weekCount: 0, monthCount: 0 });
+        setVisitorClearConfirm(false);
+      }
+    } catch (err) {
+      console.error('[clearVisitorLogs]', err);
     }
   };
 
@@ -568,6 +607,10 @@ const AdminPortal = () => {
             )}
           </button>
           
+          <button className={`nav-item ${activeTab === 'visitors' ? 'active' : ''}`} onClick={() => { setActiveTab('visitors'); fetchVisitors(); cancelEdit(); if(window.innerWidth<=768) setIsSidebarOpen(false); }}>
+            <Globe2 size={18} /> Visitor Analytics
+          </button>
+
           <button className="nav-item logout-btn" onClick={handleLogout} style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.05)', width: '100%', justifyContent: 'center', marginTop: '2.5rem' }}>
             <LogOut size={18} /> Secure Disconnect
           </button>
@@ -604,7 +647,7 @@ const AdminPortal = () => {
         {/* -------------------------------------------------------------------------------- */}
         {/* VIEW: LEDGER TABLE */}
         {/* -------------------------------------------------------------------------------- */}
-        {(!selectedUser && !isAdding && activeTab !== 'applications' && activeTab !== 'uploaded_documents' && activeTab !== 'chats') && (
+        {(!selectedUser && !isAdding && activeTab !== 'applications' && activeTab !== 'uploaded_documents' && activeTab !== 'chats' && activeTab !== 'visitors') && (
           <div className="animate-fade-in">
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
@@ -736,6 +779,12 @@ const AdminPortal = () => {
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{u.email}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>{u.phone || 'No Phone Data'}</div>
+                        {u.createdAt && (
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.7 }}>
+                            <Activity size={10} />
+                            Joined: {new Date(u.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
@@ -985,6 +1034,152 @@ const AdminPortal = () => {
                )}
              </div>
            </div>
+        )}
+
+        {/* -------------------------------------------------------------------------------- */}
+        {/* VIEW: VISITOR ANALYTICS                                                          */}
+        {/* -------------------------------------------------------------------------------- */}
+        {(!selectedUser && !isAdding && activeTab === 'visitors') && (
+          <div className="animate-fade-in">
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', flexWrap: 'wrap', gap: '15px' }}>
+              <div>
+                <h1 style={{ color: 'var(--text-main)', fontSize: '1.6rem', margin: '0 0 8px 0', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <Globe2 size={28} color="#06b6d4" /> Visitor Analytics
+                </h1>
+                <p style={{ color: 'var(--text-muted)', margin: 0 }}>Real-time website visitor intelligence. Every front-page visit is logged here.</p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={fetchVisitors}
+                  style={{ background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '0.85rem' }}
+                >
+                  <RefreshCw size={15} /> Refresh
+                </button>
+                <button
+                  onClick={() => setVisitorClearConfirm(true)}
+                  style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.25)', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '0.85rem' }}
+                >
+                  <Trash2 size={15} /> Clear Logs
+                </button>
+              </div>
+            </header>
+
+            {/* Stat Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginBottom: '28px' }}>
+              {[
+                { label: 'Today', value: visitorStats.todayCount, color: '#06b6d4', bg: 'rgba(6,182,212,0.08)', border: 'rgba(6,182,212,0.2)' },
+                { label: 'This Week', value: visitorStats.weekCount, color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.2)' },
+                { label: 'This Month', value: visitorStats.monthCount, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
+                { label: 'All Time', value: visitorStats.total, color: '#10b981', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)' },
+              ].map(stat => (
+                <div key={stat.label} style={{ background: stat.bg, border: `1px solid ${stat.border}`, borderRadius: '14px', padding: '18px 20px' }}>
+                  <div style={{ color: stat.color, fontSize: '2.2rem', fontWeight: 800, lineHeight: 1 }}>{visitorsLoading ? '…' : stat.value}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '8px' }}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Search */}
+            <div style={{ marginBottom: '16px' }}>
+              <input
+                type="text"
+                placeholder="Search by IP, country, browser, city…"
+                value={visitorSearch}
+                onChange={e => setVisitorSearch(e.target.value)}
+                style={{ background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', padding: '10px 16px', borderRadius: '8px', width: '100%', outline: 'none', fontSize: '0.9rem', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {/* Table */}
+            {visitorsLoading ? (
+              <div style={{ padding: '50px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading visitor data…</div>
+            ) : (
+              <div style={{ background: 'var(--card-bg-solid)', border: '1px solid var(--glass-border)', borderRadius: '16px', overflowX: 'auto', boxShadow: 'var(--shadow-lg)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                  <thead style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--glass-border)' }}>
+                    <tr>
+                      {['Time', 'IP Address', 'Location', 'Browser / OS', 'Device', 'Page', 'Referrer'].map(h => (
+                        <th key={h} style={{ padding: '12px 16px', color: '#a1a1aa', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visitors
+                      .filter(v => {
+                        if (!visitorSearch) return true;
+                        const q = visitorSearch.toLowerCase();
+                        return (
+                          (v.ip || '').toLowerCase().includes(q) ||
+                          (v.country || '').toLowerCase().includes(q) ||
+                          (v.city || '').toLowerCase().includes(q) ||
+                          (v.browser || '').toLowerCase().includes(q) ||
+                          (v.os || '').toLowerCase().includes(q)
+                        );
+                      })
+                      .map((v, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                          <td style={{ padding: '10px 16px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                            <div style={{ color: 'var(--text-main)', fontWeight: 500 }}>{new Date(v.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                            <div style={{ fontSize: '0.75rem' }}>{new Date(v.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                          </td>
+                          <td style={{ padding: '10px 16px', fontFamily: 'monospace', color: '#06b6d4', whiteSpace: 'nowrap' }}>{v.ip}</td>
+                          <td style={{ padding: '10px 16px' }}>
+                            <div style={{ color: 'var(--text-main)', fontWeight: 500 }}>{v.country}</div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{[v.city, v.regionName].filter(Boolean).join(', ')}</div>
+                            {v.isp && <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', opacity: 0.7 }}>{v.isp}</div>}
+                          </td>
+                          <td style={{ padding: '10px 16px' }}>
+                            <div style={{ color: 'var(--text-main)' }}>{v.browser}</div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{v.os}</div>
+                          </td>
+                          <td style={{ padding: '10px 16px' }}>
+                            <span style={{
+                              background: v.device === 'Mobile' ? 'rgba(139,92,246,0.1)' : v.device === 'Tablet' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)',
+                              color: v.device === 'Mobile' ? '#a78bfa' : v.device === 'Tablet' ? '#fbbf24' : '#34d399',
+                              border: `1px solid ${v.device === 'Mobile' ? 'rgba(139,92,246,0.3)' : v.device === 'Tablet' ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)'}`,
+                              padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px'
+                            }}>{v.device}</span>
+                          </td>
+                          <td style={{ padding: '10px 16px', color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '0.8rem' }}>{v.page}</td>
+                          <td style={{ padding: '10px 16px', color: 'var(--text-muted)', fontSize: '0.8rem', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {v.referrer === 'Direct' || !v.referrer ? (
+                              <span style={{ color: '#10b981', fontWeight: 600 }}>Direct</span>
+                            ) : (
+                              <span title={v.referrer}>{v.referrer}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    }
+                    {visitors.filter(v => {
+                      if (!visitorSearch) return true;
+                      const q = visitorSearch.toLowerCase();
+                      return (v.ip||'').toLowerCase().includes(q)||(v.country||'').toLowerCase().includes(q)||(v.city||'').toLowerCase().includes(q)||(v.browser||'').toLowerCase().includes(q)||(v.os||'').toLowerCase().includes(q);
+                    }).length === 0 && (
+                      <tr><td colSpan="7" style={{ padding: '50px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                        <Globe2 size={40} style={{ margin: '0 auto 15px auto', opacity: 0.2, display: 'block' }} />
+                        {visitorSearch ? 'No visitors match your search.' : 'No visitors recorded yet. Visit the website to generate data.'}
+                      </td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Clear confirm dialog */}
+            {visitorClearConfirm && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)', borderRadius: '16px', padding: '28px', maxWidth: '420px', width: '90%' }}>
+                  <h3 style={{ color: '#ef4444', margin: '0 0 12px 0', display: 'flex', alignItems: 'center', gap: '10px' }}><AlertTriangle size={20} /> Clear All Visitor Logs</h3>
+                  <p style={{ color: 'var(--text-muted)', margin: '0 0 24px 0' }}>This will permanently delete all {visitorStats.total} visitor records. This action cannot be undone.</p>
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                    <button onClick={() => setVisitorClearConfirm(false)} style={{ padding: '10px 20px', background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
+                    <button onClick={clearVisitorLogs} style={{ padding: '10px 20px', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>Yes, Clear All</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* -------------------------------------------------------------------------------- */}
