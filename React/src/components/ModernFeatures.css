@@ -1,0 +1,406 @@
+/* ModernFeatures.css */
+
+.modern-features-wrapper {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem; /* Reduced vertical padding */
+    position: relative;
+    z-index: 10;
+}
+
+.features-container {
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+/* ────────────────────────────────────────────────────────────
+   Agent 3 & 4: SPLIT VIEW SIDE-BY-SIDE + 3D CARDS
+   ──────────────────────────────────────────────────────────── */
+.split-view-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    perspective: 1200px; /* Essential for 3D depth */
+    margin-bottom: 4rem; /* Gap between split view and USP */
+}
+
+@media (max-width: 900px) {
+    .split-view-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+.tilt-card-wrapper {
+    position: relative;
+    border-radius: 24px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.tilt-glow {
+    position: absolute;
+    inset: -2px;
+    border-radius: 26px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    mix-blend-mode: color-dodge;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.tilt-card-wrapper:hover .tilt-glow {
+    opacity: 1;
+}
+
+.tilt-card-content {
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 2rem;
+    backdrop-filter: blur(20px);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+}
+
+[data-theme='light'] .tilt-card-content {
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.06);
+}
+
+.split-header {
+    text-align: left;
+    margin-bottom: 1.5rem;
+}
+
+.split-header .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+}
+
+.split-header h3 {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.1;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+[data-theme='light'] .split-header h3 {
+    color: #111;
+}
+
+.split-header h3 span {
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.student-card .split-header h3 span {
+    background-image: linear-gradient(90deg, #3b82f6, #8b5cf6);
+}
+
+.partner-card .split-header h3 span {
+    background-image: linear-gradient(90deg, #f43f5e, #f59e0b);
+}
+
+/* Compact feature list */
+.split-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    flex-grow: 1;
+    margin-bottom: 2rem;
+}
+
+.compact-feature-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.cfi-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cfi-text h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.15rem 0;
+}
+
+[data-theme='light'] .cfi-text h4 { color: #1e293b; }
+
+.cfi-text p {
+    font-size: 0.75rem;
+    color: var(--text-muted, #94a3b8);
+    margin: 0;
+    line-height: 1.35;
+}
+
+/* Call to action inside cards */
+.split-cta {
+    width: 100%;
+    padding: 0.8rem;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #fff;
+}
+
+.student-cta {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+}
+
+.partner-cta {
+    background: linear-gradient(135deg, #f43f5e, #f59e0b);
+    box-shadow: 0 4px 15px rgba(244, 63, 94, 0.4);
+}
+
+.split-cta:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+
+/* ────────────────────────────────────────────────────────────
+   Agent 2: USP HORIZONTAL GRID (Fits 1 screen easily)
+   ──────────────────────────────────────────────────────────── */
+.usp-container {
+    padding-top: 1rem; /* minimal padding */
+}
+
+.usp-header-compact {
+    text-align: center;
+    margin-bottom: 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.usp-header-compact .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.modern-title {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #fff;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+[data-theme='light'] .modern-title { color: #111; }
+
+.modern-title span {
+    background: linear-gradient(90deg, #eab308, #f59e0b);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.usp-horizontal-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+}
+
+@media (max-width: 1000px) {
+    .usp-horizontal-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ── Mobile: Registration cards compact ─────── */
+@media (max-width: 768px) {
+    .split-view-container {
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .tilt-card-content {
+        padding: 1.25rem 1rem;
+    }
+    .split-header {
+        margin-bottom: 0.75rem;
+    }
+    .split-header h3 {
+        font-size: 1.5rem;
+    }
+    .split-header .header-badge {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        margin-bottom: 0.5rem;
+    }
+    /* 2-col × 4-row grid on mobile */
+    .split-body {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.8rem 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+    /* Side-by-side icon and text layout */
+    .compact-feature-item {
+        flex-direction: row;
+        align-items: center;
+        text-align: left;
+        gap: 0.5rem;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 10px;
+        padding: 0.5rem;
+        min-height: 48px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        user-select: none;
+    }
+    .compact-feature-item:active {
+        transform: scale(0.95);
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(59, 130, 246, 0.4);
+    }
+    [data-theme='light'] .compact-feature-item:active {
+        background: rgba(0, 0, 0, 0.08);
+        border-color: rgba(59, 130, 246, 0.2);
+    }
+    [data-theme='light'] .compact-feature-item {
+        background: rgba(0,0,0,0.02);
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+    .cfi-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        flex-shrink: 0;
+    }
+    /* On mobile show only the title, hide the desc to save space */
+    .cfi-text {
+        flex: 1;
+    }
+    .cfi-text h4 {
+        font-size: 0.68rem;
+        line-height: 1.2;
+        margin: 0;
+        letter-spacing: -0.2px;
+    }
+    .cfi-text p {
+        display: none;
+    }
+    .split-cta {
+        padding: 0.6rem;
+        font-size: 0.88rem;
+        border-radius: 10px;
+    }
+}
+
+/* ── Mobile: USP cards stay 2-column ─────────── */
+@media (max-width: 500px) {
+    /* USP stays 2-col, never collapses to 1 */
+    .usp-horizontal-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.6rem;
+    }
+    .usp-grid-card {
+        padding: 0.85rem 0.7rem;
+    }
+    .usp-icon-wrap-compact {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        margin-bottom: 0.6rem;
+    }
+    .usp-text-compact h4 {
+        font-size: 0.82rem;
+    }
+    .usp-text-compact p {
+        font-size: 0.72rem;
+        line-height: 1.3;
+    }
+    .modern-title {
+        font-size: 1.7rem;
+    }
+}
+
+.usp-grid-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+}
+
+[data-theme='light'] .usp-grid-card {
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.03);
+}
+
+.usp-grid-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(234, 179, 8, 0.4);
+}
+
+[data-theme='light'] .usp-grid-card:hover {
+    background: #fff;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
+
+.usp-icon-wrap-compact {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(234, 179, 8, 0.15);
+    color: #eab308;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.usp-text-compact h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 0.3rem 0;
+}
+
+[data-theme='light'] .usp-text-compact h4 { color: #111; }
+
+.usp-text-compact p {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--text-muted, #94a3b8);
+    margin: 0;
+}

@@ -1,0 +1,379 @@
+/* ═══════════════════════════════════════════════════════
+   DashGallery.css — 3D Carousel Gallery
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Carousel wrapper ────────────────────────── */
+.dgc-carousel-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.25rem 0;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* ── 3D Scene ────────────────────────────────── */
+.dgc-scene {
+    position: relative;
+    width: 100%;
+    max-width: 1100px;
+    height: 360px;
+    perspective: 1600px;
+    perspective-origin: 50% 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Card ────────────────────────────────────── */
+.dgc-card {
+    position: absolute;
+    width: 480px;
+    height: 300px;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    will-change: transform, opacity;
+    transition: filter 0.3s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.dgc-card:not(.dgc-center):hover {
+    filter: brightness(1.15);
+}
+
+.dgc-card:hover .dgc-inner {
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.7),
+        0 0 45px rgba(139, 92, 246, 0.2),
+        0 0 0 1px rgba(255, 255, 255, 0.12);
+    border-color: rgba(139, 92, 246, 0.35);
+}
+
+[data-theme='light'] .dgc-card:hover .dgc-inner {
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.15),
+        0 0 45px rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+.dgc-card:hover .dgc-overlay {
+    opacity: 1;
+}
+
+.dgc-center {
+    cursor: zoom-in;
+}
+
+/* ── Inner container ────────────────────────── */
+.dgc-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #0d0d18;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.04);
+    transition: box-shadow 0.4s ease, border-color 0.4s ease;
+}
+
+[data-theme='light'] .dgc-inner {
+    background: #f8f9ff;
+    border-color: rgba(0, 0, 0, 0.06);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Center card glow */
+.dgc-center .dgc-inner {
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.7),
+        0 0 50px rgba(99, 102, 241, 0.2),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+    border-color: rgba(139, 92, 246, 0.25);
+}
+
+[data-theme='light'] .dgc-center .dgc-inner {
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.18),
+        0 0 50px rgba(99, 102, 241, 0.12);
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
+/* ── Dashboard screenshot ──────────────────── */
+.dgc-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+    -webkit-user-drag: none;
+    /* Prevent native image ghost dragging */
+    pointer-events: none;
+    /* Pass pointer events to card */
+}
+
+.dgc-center:hover .dgc-img {
+    transform: scale(1.04);
+}
+
+/* ── Hover info overlay (center card only) ──── */
+.dgc-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top,
+            rgba(0, 0, 0, 0.75) 0%,
+            rgba(0, 0, 0, 0.1) 50%,
+            transparent 100%);
+    opacity: 0;
+    display: flex;
+    align-items: flex-end;
+    padding: 1rem 1.2rem;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+}
+
+.dgc-center:hover .dgc-overlay {
+    opacity: 1;
+}
+
+.dgc-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+    line-height: 1.3;
+}
+
+.dgc-zoom {
+    font-size: 1.3rem;
+    opacity: 0.7;
+    line-height: 1;
+}
+
+/* ── Navigation arrows ────────────────────────── */
+.dgc-arrow {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: var(--fp-text, #f0f4ff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    z-index: 20;
+    flex-shrink: 0;
+}
+
+.dgc-arrow:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(139, 92, 246, 0.4);
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+}
+
+[data-theme='light'] .dgc-arrow {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #1e293b;
+}
+
+[data-theme='light'] .dgc-arrow:hover {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(99, 102, 241, 0.3);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+}
+
+/* ── Dot indicators ──────────────────────────── */
+.dgc-dots {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: -11px;
+    padding: 0 0 0.25rem;
+}
+
+.dgc-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+    transition: all 0.35s ease;
+    padding: 0;
+}
+
+.dgc-dot:hover {
+    background: rgba(255, 255, 255, 0.5);
+    transform: scale(1.3);
+}
+
+.dgc-dot-active {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    width: 22px;
+    border-radius: 10px;
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+}
+
+[data-theme='light'] .dgc-dot {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+[data-theme='light'] .dgc-dot:hover {
+    background: rgba(0, 0, 0, 0.35);
+}
+
+[data-theme='light'] .dgc-dot-active {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    box-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+}
+
+/* ─────────────────── LIGHTBOX ─────────────── */
+.lb-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 4, 14, 0.93);
+    backdrop-filter: blur(24px) saturate(0.5);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    cursor: zoom-out;
+}
+
+.lb-box {
+    position: relative;
+    max-width: 92vw;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: default;
+}
+
+.lb-img {
+    max-width: 88vw;
+    max-height: 78vh;
+    object-fit: contain;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow:
+        0 50px 120px rgba(0, 0, 0, 0.96),
+        0 0 80px rgba(99, 102, 241, 0.22);
+    display: block;
+}
+
+.lb-caption {
+    margin-top: 1.4rem;
+    color: rgba(255, 255, 255, 0.84);
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    text-align: center;
+}
+
+.lb-close {
+    position: absolute;
+    top: -50px;
+    right: 0;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    color: #fff;
+    font-size: 1.1rem;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.3s;
+    line-height: 1;
+}
+
+.lb-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg);
+}
+
+/* ── Light theme lightbox ────────────────────── */
+[data-theme='light'] .lb-backdrop {
+    background: rgba(235, 235, 255, 0.93);
+}
+
+[data-theme='light'] .lb-img {
+    border-color: rgba(0, 0, 0, 0.09);
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.22);
+}
+
+[data-theme='light'] .lb-caption {
+    color: #181825;
+}
+
+[data-theme='light'] .lb-close {
+    background: rgba(0, 0, 0, 0.07);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #222;
+}
+
+/* ── Responsive ───────────────────────────────── */
+@media (max-width: 1000px) {
+    .dgc-scene {
+        height: 280px;
+    }
+
+    .dgc-card {
+        width: 380px;
+        height: 240px;
+    }
+}
+
+@media (max-width: 640px) {
+    .dgc-scene {
+        height: 200px;
+    }
+
+    .dgc-card {
+        width: 280px;
+        height: 180px;
+    }
+
+    .dgc-arrow {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (max-width: 480px) {
+    .dgc-scene {
+        height: 170px;
+    }
+
+    .dgc-card {
+        width: 230px;
+        height: 140px;
+    }
+
+    .dgc-arrow {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .dgc-carousel-wrap {
+        gap: 0.2rem;
+    }
+}
