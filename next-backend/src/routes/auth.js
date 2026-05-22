@@ -80,6 +80,10 @@ router.post('/login', async (req, res) => {
     });
     
     if (!user) return res.status(400).json({ error: "User not found" });
+
+    if (user.isDeleted) {
+      return res.status(400).json({ error: "Account not found or has been deleted." });
+    }
     
     // Enforce Block Status
     if (user.isBlocked) {

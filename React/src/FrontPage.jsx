@@ -24,7 +24,7 @@ import './FrontPage.css';
 
 const PLANE_CONFIG = {
     // ⏱️ 1. SPEED / TIME
-    duration: 5,       // Total seconds the flight takes. Lower = Faster, Higher = Slower.
+    duration: 4.0,       // Total seconds the flight takes. Lower = Faster, Higher = Slower.
     delay: 0,          // Seconds to wait before starting. (Keep 0 usually)
 
     // 🗺️ 2. START POSITION (Where does it fly FROM?)
@@ -50,22 +50,29 @@ const LOADER_CONFIG = {
 };
 
 const PageLoader = ({ onDone }) => {
+    const [exiting, setExiting] = React.useState(false);
+
     useEffect(() => {
         document.body.style.overflow = 'hidden';
         window.scrollTo(0, 0);
-        // Trigger exit instantly as the plane flies off the screen (at approx 82% of duration)
         const total = (PLANE_CONFIG.duration * 0.82 + PLANE_CONFIG.delay) * 1000;
-        const t = setTimeout(() => {
+
+        // First: trigger text zoom-out animation
+        const exitStart = setTimeout(() => setExiting(true), total);
+
+        // Then: unmount the loader after zoom-out plays (320ms later)
+        const exitDone = setTimeout(() => {
             document.body.style.overflow = '';
             onDone();
-        }, total);
-        return () => clearTimeout(t);
+        }, total + 320);
+
+        return () => { clearTimeout(exitStart); clearTimeout(exitDone); };
     }, [onDone]);
 
     return (
         <motion.div
             className="page-loader"
-            exit={{ clipPath: 'inset(0 0 100% 0)', transition: { duration: 0.45, ease: [0.76, 0, 0.24, 1] } }}
+            exit={{ clipPath: 'inset(0 0 100% 0)', transition: { duration: 0.40, ease: [0.76, 0, 0.24, 1] } }}
         >
             {/* Corner brackets */}
             <div className="loader-corner lc-tl" />
@@ -100,8 +107,8 @@ const PageLoader = ({ onDone }) => {
                 <motion.div
                     className="loader-globe"
                     initial={{ opacity: 0, scale: 0.6 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                    animate={exiting ? { opacity: 0, scale: 0.5 } : { opacity: 1, scale: 1 }}
+                    transition={{ duration: exiting ? 0.35 : 0.5, ease: [0.22, 1, 0.36, 1] }}
                 >
                     🌍
                 </motion.div>
@@ -109,18 +116,27 @@ const PageLoader = ({ onDone }) => {
                 <motion.div
                     className="loader-tagline"
                     initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.45, delay: 0.15 }}
+                    animate={exiting ? { opacity: 0, scale: 0.85 } : { opacity: 1, y: 0 }}
+                    transition={{ duration: exiting ? 0.3 : 0.45, delay: exiting ? 0 : 0.15 }}
                 >
                     FREE ABROAD EDUCATION AWAITS
                 </motion.div>
 
-                {/* Two-line staggered cursive word reveal */}
+                {/* Two-line staggered cursive word reveal — zoom-out on exit */}
                 <motion.div
                     className="loader-word"
                     initial="hidden"
-                    animate="visible"
-                    variants={{ visible: { transition: { staggerChildren: 0.22, delayChildren: 0.15 } } }}
+                    animate={exiting ? 'exiting' : 'visible'}
+                    variants={{
+                        hidden: { opacity: 0 },
+                        visible: { opacity: 1, transition: { staggerChildren: 0.22, delayChildren: 0.15 } },
+                        exiting: {
+                            opacity: 0,
+                            scale: 0.25,
+                            filter: 'blur(6px)',
+                            transition: { duration: 0.4, ease: [0.4, 0, 1, 1] }
+                        }
+                    }}
                     style={{ '--loader-text-size': LOADER_CONFIG.textSize }}
                 >
                     <div className="loader-line-1">
@@ -131,6 +147,12 @@ const PageLoader = ({ onDone }) => {
                                 visible: {
                                     opacity: 1, y: 0, scale: 1,
                                     transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+                                },
+                                exiting: {
+                                    opacity: 0,
+                                    scale: 0.2,
+                                    filter: 'blur(4px)',
+                                    transition: { duration: 0.35, ease: [0.4, 0, 1, 1] }
                                 }
                             }}
                         >
@@ -145,6 +167,12 @@ const PageLoader = ({ onDone }) => {
                                 visible: {
                                     opacity: 1, y: 0, scale: 1,
                                     transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] }
+                                },
+                                exiting: {
+                                    opacity: 0,
+                                    scale: 0.2,
+                                    filter: 'blur(4px)',
+                                    transition: { duration: 0.35, delay: 0.05, ease: [0.4, 0, 1, 1] }
                                 }
                             }}
                         >
@@ -157,15 +185,19 @@ const PageLoader = ({ onDone }) => {
                 <motion.div
                     className="loader-dest-badge"
                     initial={{ opacity: 0, scale: 0.85 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: 0.6 }}
+                    animate={exiting ? { opacity: 0, scale: 0.8 } : { opacity: 1, scale: 1 }}
+                    transition={{ duration: exiting ? 0.3 : 0.4, delay: exiting ? 0 : 0.6 }}
                 >
                     <span className="dest-dot" />
                     <span>Italy · Germany · Abroad</span>
                 </motion.div>
 
                 {/* Progress bar */}
-                <div className="loader-bar-track">
+                <motion.div
+                    className="loader-bar-track"
+                    animate={exiting ? { opacity: 0, scaleX: 0.8 } : { opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                >
                     <motion.div
                         className="loader-bar-fill"
                         initial={{ scaleX: 0 }}
@@ -173,13 +205,13 @@ const PageLoader = ({ onDone }) => {
                         transition={{ duration: PLANE_CONFIG.duration * 0.82 - 0.2, delay: PLANE_CONFIG.delay, ease: [0.22, 1, 0.36, 1] }}
                         style={{ originX: 0 }}
                     />
-                </div>
+                </motion.div>
 
                 <motion.div
                     className="loader-counter"
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.1, duration: 0.3 }}
+                    animate={exiting ? { opacity: 0, scale: 0.85 } : { opacity: 1 }}
+                    transition={{ duration: exiting ? 0.25 : 0.3, delay: exiting ? 0 : 0.1 }}
                 >
                     <CountUp duration={(PLANE_CONFIG.duration * 0.82 - 0.2) * 1000} delay={PLANE_CONFIG.delay * 1000} />
                 </motion.div>
@@ -245,6 +277,7 @@ const FrontPage = () => {
         try {
             fetch(`${API_BASE_URL}/visitors/track`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: { 'Content-Type': 'application/json', 'x-csrf-protected': '1' },
                 body: JSON.stringify({
                     referrer: document.referrer || 'Direct',
@@ -262,7 +295,7 @@ const FrontPage = () => {
         document.body.scrollTop = 0;
     }, []);
 
-    // When loader finishes, wait for its exit animation (0.6s) THEN reveal content
+    // When loader finishes, wait for its exit animation (0.4s) THEN reveal content
     useEffect(() => {
         if (!loading) {
             const t = setTimeout(() => {
@@ -270,7 +303,7 @@ const FrontPage = () => {
                 window.scrollTo({ top: 0, behavior: 'instant' });
                 document.documentElement.scrollTop = 0;
                 document.body.scrollTop = 0;
-            }, 600); // Wait for the faster loader exit to finish
+            }, 400); // Wait for the loader exit to finish
             return () => clearTimeout(t);
         }
     }, [loading]);

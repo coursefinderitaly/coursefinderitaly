@@ -12,6 +12,10 @@ const VisitorSchema = new mongoose.Schema({
   city: { type: String, default: 'Unknown' },
   regionName: { type: String, default: '' },
   isp: { type: String, default: '' },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  userName: { type: String, default: '' },
+  userEmail: { type: String, default: '' },
+  userRole: { type: String, default: '' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Visitor', VisitorSchema);

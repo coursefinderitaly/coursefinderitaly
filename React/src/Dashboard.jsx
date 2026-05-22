@@ -124,6 +124,19 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchProfile();
+    // Silent visitor tracking — fire-and-forget, never blocks the page
+    try {
+      fetch(`${API_BASE_URL}/visitors/track`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', 'x-csrf-protected': '1' },
+        body: JSON.stringify({
+          referrer: document.referrer || 'Direct',
+          page: window.location.pathname || '/dashboard',
+        }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (_) {}
   }, []);
 
   useEffect(() => {

@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const Visitor = require('../models/Visitor');
+const User = require('../models/User');
 const auth = require('../middleware/auth');
 const checkRole = require('../middleware/rbac');
 
@@ -47,8 +49,28 @@ router.post('/track', async (req, res) => {
 
     // ── Parse Device
     let device = 'Desktop';
-    if (/Mobile/.test(userAgent)) device = 'Mobile';
-    else if (/Tablet|iPad/.test(userAgent)) device = 'Tablet';
+    if (/Mobile/.test(userAgent)) {
+      if (/iPhone/.test(userAgent)) {
+        device = 'iPhone';
+      } else if (/Android/.test(userAgent)) {
+        const match = userAgent.match(/Android\s+[^;]+;\s+([^;)]+)/);
+        device = match && match[1] ? match[1].trim() : 'Android Phone';
+      } else {
+        device = 'Mobile Device';
+      }
+    } else if (/Tablet|iPad/.test(userAgent)) {
+      device = /iPad/.test(userAgent) ? 'iPad' : 'Tablet';
+    } else {
+      if (/Macintosh/.test(userAgent)) {
+        device = 'Mac';
+      } else if (/Windows NT/.test(userAgent)) {
+        device = 'Windows PC';
+      } else if (/Linux/.test(userAgent)) {
+        device = 'Linux PC';
+      } else {
+        device = 'Desktop';
+      }
+    }
 
     // ── Geo lookup (ip-api.com — free, no API key needed)
     let country = 'Unknown', city = 'Unknown', regionName = '', isp = '';
@@ -73,7 +95,47 @@ router.post('/track', async (req, res) => {
       city = 'Localhost';
     }
 
-    await Visitor.create({ ip, userAgent, browser, os, device, page, referrer, country, city, regionName, isp });
+    // ── Check if logged-in user is tracking
+    let userId = null;
+    let userName = '';
+    let userRole = '';
+    let userEmail = '';
+
+    const token = (req.cookies && req.cookies.token) || req.header('x-auth-token') || req.header('Authorization')?.replace('Bearer ', '');
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded && decoded.id) {
+          const user = await User.findById(decoded.id).lean();
+          if (user) {
+            userId = user._id;
+            userName = `${user.firstName} ${user.lastName || ''}`.trim();
+            userRole = user.role;
+            userEmail = user.email;
+          }
+        }
+      } catch (jwtErr) {
+        // Invalid or expired token — ignore silently
+      }
+    }
+
+    await Visitor.create({
+      ip,
+      userAgent,
+      browser,
+      os,
+      device,
+      page,
+      referrer,
+      country,
+      city,
+      regionName,
+      isp,
+      user: userId,
+      userName,
+      userEmail,
+      userRole
+    });
     res.status(201).json({ ok: true });
   } catch (err) {
     console.error('[Visitor track error]', err.message);
@@ -91,6 +153,15 @@ router.get('/', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 100;
     const skip = (page - 1) * limit;
+    const { date } = req.query;
+
+    const query = {};
+    if (date) {
+      // Date format is YYYY-MM-DD
+      const startOfTarget = new Date(`${date}T00:00:00`);
+      const endOfTarget = new Date(`${date}T23:59:59.999`);
+      query.createdAt = { $gte: startOfTarget, $lte: endOfTarget };
+    }
 
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -99,8 +170,8 @@ router.get('/', async (req, res) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const [visitors, total, todayCount, weekCount, monthCount] = await Promise.all([
-      Visitor.find().sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-      Visitor.countDocuments(),
+      Visitor.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      Visitor.countDocuments(query),
       Visitor.countDocuments({ createdAt: { $gte: startOfToday } }),
       Visitor.countDocuments({ createdAt: { $gte: startOfWeek } }),
       Visitor.countDocuments({ createdAt: { $gte: startOfMonth } }),

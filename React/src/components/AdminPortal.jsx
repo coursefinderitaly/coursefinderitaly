@@ -4,7 +4,8 @@ import {
   Users, Trash2, LogOut, ShieldAlert, Edit2, ChevronLeft, Save, Plus,
   MapPin, Phone, Briefcase, GraduationCap, Building2, UserCircle, KeyRound,
   Database, Server, ShieldCheck, Mail, Sun, Moon, Monitor, Globe, FileText, Unlock, Ban,
-  MessageSquare, Send, X, AlertTriangle, Search, Globe2, Activity, Smartphone, RefreshCw
+  MessageSquare, Send, X, AlertTriangle, Search, Globe2, Activity, Smartphone, RefreshCw,
+  Calendar, Download
 } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import { useTheme } from '../ThemeContext';
@@ -15,6 +16,7 @@ import SystemHierarchy from './SystemHierarchy';
 import PartnerDirectoryBrowser from './PartnerDirectoryBrowser';
 import SearchableSelect from './SearchableSelect';
 import ApplicationTracking from './ApplicationTracking';
+import * as XLSX from 'xlsx';
 
 const AdminPortal = () => {
   const [users, setUsers] = useState([]);
@@ -46,6 +48,57 @@ const AdminPortal = () => {
   const [visitorStats, setVisitorStats] = useState({ total: 0, todayCount: 0, weekCount: 0, monthCount: 0 });
   const [visitorsLoading, setVisitorsLoading] = useState(false);
   const [visitorSearch, setVisitorSearch] = useState('');
+  const [visitorDate, setVisitorDate] = useState('');
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const calendarRef = useRef(null);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
+        setShowCalendar(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
+
+  const calendarCells = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const totalDays = getDaysInMonth(year, month);
+    const firstDay = getFirstDayOfMonth(year, month);
+    const cells = [];
+    for (let i = 0; i < firstDay; i++) {
+      cells.push({ type: 'empty', key: `empty-${i}` });
+    }
+    for (let day = 1; day <= totalDays; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      cells.push({ type: 'day', day, dateStr, key: `day-${day}` });
+    }
+    return cells;
+  }, [calendarMonth]);
+
+  const nextMonth = () => {
+    setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1));
+  };
+
+  const prevMonth = () => {
+    setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
+  };
+
   const [visitorClearConfirm, setVisitorClearConfirm] = useState(false);
   const [chatClearConfirm, setChatClearConfirm] = useState({ isOpen: false, studentId: null, studentName: '' });
 
@@ -167,6 +220,13 @@ const AdminPortal = () => {
     checkAdminAccess();
   }, []);
 
+  // Auto-fetch visitor stats when viewing overview or visitors tab or changing date filter
+  useEffect(() => {
+    if (activeTab === 'overview' || activeTab === 'visitors') {
+      fetchVisitors(visitorDate);
+    }
+  }, [activeTab, visitorDate]);
+
   // Poll for new student messages every 20 seconds (admin side)
   useEffect(() => {
     const poll = async () => {
@@ -217,10 +277,14 @@ const AdminPortal = () => {
     }
   };
 
-  const fetchVisitors = async () => {
+  const fetchVisitors = async (selectedDate = visitorDate) => {
     setVisitorsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/visitors?limit=200`, { credentials: 'include' });
+      let url = `${API_BASE_URL}/visitors?limit=200`;
+      if (selectedDate) {
+        url += `&date=${selectedDate}`;
+      }
+      const res = await fetch(url, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         setVisitors(data.visitors || []);
@@ -324,6 +388,8 @@ const AdminPortal = () => {
     setLoading(false);
   };
 
+
+
   const handleEdit = (user) => {
     setMessage({ text: '', type: '' });
     setSelectedUser(user);
@@ -398,17 +464,23 @@ const AdminPortal = () => {
     setConfirmDialog({ isOpen: true, action: 'delete', targetId: id });
   };
 
+  const handlePermanentDeleteUser = (id) => {
+    setConfirmDialog({ isOpen: true, action: 'deletePermanent', targetId: id });
+  };
+
   const executeDelete = async () => {
     const id = confirmDialog.targetId;
+    const isPermanent = confirmDialog.action === 'deletePermanent';
     setConfirmDialog({ isOpen: false, action: null, targetId: null });
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
+      const endpoint = isPermanent ? `${API_BASE_URL}/admin/users/${id}/permanent` : `${API_BASE_URL}/admin/users/${id}`;
+      const res = await fetch(endpoint, {
       credentials: 'include',
         method: 'DELETE',
         });
       if (res.ok) {
-        setUsers(users.filter(u => u._id !== id));
-        setMessage({ text: 'Entity permanently erased from database.', type: 'success' });
+        fetchUsers();
+        setMessage({ text: isPermanent ? 'Entity permanently obliterated.' : 'Entity moved to trash successfully.', type: 'success' });
         if (selectedUser && selectedUser._id === id) cancelEdit();
       } else {
         setMessage({ text: 'Failed to erase entity', type: 'error' });
@@ -417,6 +489,26 @@ const AdminPortal = () => {
       setMessage({ text: 'Server error during deletion', type: 'error' });
     }
   };
+
+  const handleRestoreUser = async (id) => {
+    if (!window.confirm("Restore this account to active status?")) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/users/${id}/restore`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        fetchUsers();
+        setMessage({ text: 'Account restored successfully.', type: 'success' });
+      } else {
+        setMessage({ text: 'Failed to restore account', type: 'error' });
+      }
+    } catch (err) {
+      setMessage({ text: 'Server error during restoration', type: 'error' });
+    }
+  };
+
+
 
   const handleUnlockUser = async (id) => {
     try {
@@ -479,18 +571,165 @@ const AdminPortal = () => {
     navigate('/');
   };
 
+  const handleDownloadExcel = () => {
+    const wsData = [];
+    const addEmptyRow = () => wsData.push([]);
+
+    const directStudents = users.filter(u => u.role === 'student' && !u.registeredBy && !u.createdByCounselor);
+    const partners = users.filter(u => u.role === 'partner');
+    const counselors = users.filter(u => u.role === 'counselor');
+
+    // 1. DIRECT STUDENTS
+    wsData.push(["=== DIRECT STUDENTS ==="]);
+    wsData.push(["Full Name", "Email Address", "Phone Number", "Access Level", "Registration Date"]);
+    if (directStudents.length > 0) {
+      directStudents.forEach(u => {
+        wsData.push([`${u.firstName || ''} ${u.lastName || ''}`.trim(), u.email || '', u.phone || '', 'Direct Student', u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-IN') : '']);
+      });
+    } else {
+      wsData.push(["No direct students found."]);
+    }
+    addEmptyRow();
+    addEmptyRow();
+
+    // 2. PARTNERS
+    wsData.push(["=== PARTNERS & THEIR STUDENTS ==="]);
+    if (partners.length > 0) {
+      partners.forEach(p => {
+        const partnerName = p.companyName ? `${p.companyName} (${p.firstName || ''} ${p.lastName || ''})` : `${p.firstName || ''} ${p.lastName || ''}`;
+        wsData.push([`[PARTNER] ${partnerName}`, `Email: ${p.email || 'N/A'}`, `Phone: ${p.phone || 'N/A'}`, `Joined: ${p.createdAt ? new Date(p.createdAt).toLocaleDateString('en-IN') : ''}`]);
+        
+        const pStudents = users.filter(u => u.role === 'student' && u.registeredBy && (u.registeredBy === p._id || u.registeredBy === p.studentUniqueId));
+        if (pStudents.length > 0) {
+          wsData.push(["", "Student Full Name", "Student Email", "Student Phone", "Access Level", "Registration Date"]);
+          pStudents.forEach(stu => {
+            wsData.push(["", `${stu.firstName || ''} ${stu.lastName || ''}`.trim(), stu.email || '', stu.phone || '', 'Partner Student', stu.createdAt ? new Date(stu.createdAt).toLocaleDateString('en-IN') : '']);
+          });
+        } else {
+          wsData.push(["", "No students registered under this partner yet."]);
+        }
+        addEmptyRow();
+      });
+    } else {
+      wsData.push(["No partners found."]);
+    }
+    addEmptyRow();
+
+    // 3. COUNSELORS / FREELANCERS
+    wsData.push(["=== COUNSELORS / FREELANCERS & THEIR STUDENTS ==="]);
+    if (counselors.length > 0) {
+      counselors.forEach(c => {
+        wsData.push([`[COUNSELOR/FREELANCER] ${c.firstName || ''} ${c.lastName || ''}`, `Email: ${c.email || 'N/A'}`, `Phone: ${c.phone || 'N/A'}`, `Joined: ${c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN') : ''}`]);
+        
+        const cStudents = users.filter(u => u.role === 'student' && u.createdByCounselor && ((typeof u.createdByCounselor === 'string' && u.createdByCounselor === c._id) || (typeof u.createdByCounselor === 'object' && u.createdByCounselor._id === c._id)));
+        if (cStudents.length > 0) {
+          wsData.push(["", "Student Full Name", "Student Email", "Student Phone", "Access Level", "Registration Date"]);
+          cStudents.forEach(stu => {
+            wsData.push(["", `${stu.firstName || ''} ${stu.lastName || ''}`.trim(), stu.email || '', stu.phone || '', 'Counselor Student', stu.createdAt ? new Date(stu.createdAt).toLocaleDateString('en-IN') : '']);
+          });
+        } else {
+          wsData.push(["", "No students registered under this counselor yet."]);
+        }
+        addEmptyRow();
+      });
+    } else {
+      wsData.push(["No counselors/freelancers found."]);
+    }
+
+    // Flat list of All Students Sheet
+    const activeStudents = users.filter(u => u.role === 'student' && u.isDeleted !== true);
+    const studentsSheetData = [
+      ["S.No", "Full Name", "Email Address", "Phone Number", "Access Level", "Registered By / Owner", "Total Applications", "Registration Date"]
+    ];
+
+    activeStudents.forEach((stu, idx) => {
+      const partnerId = stu.registeredBy;
+      const partner = partnerId ? users.find(p => p.role === 'partner' && (p._id === partnerId || p.studentUniqueId === partnerId)) : null;
+      const partnerName = partner ? (partner.companyName || `${partner.firstName} ${partner.lastName || ''}`.trim()) : (partnerId || '');
+      
+      const counselorId = typeof stu.createdByCounselor === 'string' ? stu.createdByCounselor : (stu.createdByCounselor?._id || null);
+      const counselor = counselorId ? users.find(c => c._id === counselorId) : null;
+      const counselorName = counselor ? `${counselor.firstName} ${counselor.lastName || ''}`.trim() : '';
+
+      let level = 'Direct Student';
+      let owner = '-';
+      if (partnerId) {
+        level = 'Partner Student';
+        owner = partnerName;
+      } else if (counselorId) {
+        level = 'Counselor Student';
+        owner = counselorName;
+      }
+
+      const totalApps = (stu.appliedUniversities || []).filter(app => app && typeof app === 'object' && app.id).length;
+      const regDate = stu.createdAt ? new Date(stu.createdAt).toLocaleDateString('en-IN') : '';
+
+      studentsSheetData.push([
+        idx + 1,
+        `${stu.firstName || ''} ${stu.lastName || ''}`.trim(),
+        stu.email || '',
+        stu.phone || '',
+        level,
+        owner,
+        totalApps,
+        regDate
+      ]);
+    });
+
+    const workbook = XLSX.utils.book_new();
+
+    // Add Flat Students Sheet first
+    const wsStudents = XLSX.utils.aoa_to_sheet(studentsSheetData);
+    wsStudents['!cols'] = [
+      { wch: 8 },  // S.No
+      { wch: 30 }, // Full Name
+      { wch: 35 }, // Email Address
+      { wch: 20 }, // Phone Number
+      { wch: 20 }, // Access Level
+      { wch: 30 }, // Registered By
+      { wch: 18 }, // Total Applications
+      { wch: 20 }, // Registration Date
+    ];
+    XLSX.utils.book_append_sheet(workbook, wsStudents, "All Students Database");
+
+    // Add Structured Directory Sheet second
+    const wsDirectory = XLSX.utils.aoa_to_sheet(wsData);
+    wsDirectory['!cols'] = [
+      { wch: 38 }, 
+      { wch: 35 }, 
+      { wch: 35 }, 
+      { wch: 20 }, 
+      { wch: 20 }, 
+    ];
+    XLSX.utils.book_append_sheet(workbook, wsDirectory, "Structured Directory");
+
+    // Generate filename dynamically replacing "downlaoddate" with current formatted date
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const yyyy = today.getFullYear();
+    const formattedDate = `${dd}_${mm}_${yyyy}`;
+    
+    // Write out the file
+    XLSX.writeFile(workbook, `Coursefinder_${formattedDate}.xlsx`);
+  };
+
   const filteredUsers = useMemo(() => {
     const nonAdmins = users.filter(u => u.role !== 'admin');
-    if (activeTab === 'all' || activeTab === 'overview' || activeTab === 'applications') return nonAdmins;
-    if (activeTab === 'direct_students') return nonAdmins.filter(u => u.role === 'student' && !u.registeredBy && !u.createdByCounselor);
-    if (activeTab === 'partner_students') return nonAdmins.filter(u => u.role === 'student' && (!!u.registeredBy || !!u.createdByCounselor));
-    if (activeTab === 'partners') return nonAdmins.filter(u => u.role === 'partner');
-    return nonAdmins;
+    if (activeTab === 'trash') return nonAdmins.filter(u => u.isDeleted === true);
+    
+    const activeNonAdmins = nonAdmins.filter(u => u.isDeleted !== true);
+
+    if (activeTab === 'all' || activeTab === 'overview' || activeTab === 'applications') return activeNonAdmins;
+    if (activeTab === 'direct_students') return activeNonAdmins.filter(u => u.role === 'student' && !u.registeredBy && !u.createdByCounselor);
+    if (activeTab === 'partner_students') return activeNonAdmins.filter(u => u.role === 'student' && (!!u.registeredBy || !!u.createdByCounselor));
+    if (activeTab === 'partners') return activeNonAdmins.filter(u => u.role === 'partner');
+    return activeNonAdmins;
   }, [users, activeTab]);
 
   const allApplications = useMemo(() => {
     const apps = [];
-    users.filter(u => u.role === 'student').forEach(student => {
+    users.filter(u => u.role === 'student' && u.isDeleted !== true).forEach(student => {
       const validApps = (student.appliedUniversities || []).filter(u => u && typeof u === 'object' && u.id);
       validApps.forEach(app => {
         
@@ -524,11 +763,11 @@ const AdminPortal = () => {
   }, [users]);
 
   const stats = {
-    total: users.filter(u => u.role !== 'admin' && u.role !== 'counselor').length,
-    directStudents: users.filter(u => u.role === 'student' && !u.registeredBy && !u.createdByCounselor).length,
-    partnerStudents: users.filter(u => u.role === 'student' && (!!u.registeredBy || !!u.createdByCounselor)).length,
-    partners: users.filter(u => u.role === 'partner').length,
-    admins: users.filter(u => u.role === 'admin').length
+    total: users.filter(u => u.role !== 'admin' && u.role !== 'counselor' && u.isDeleted !== true).length,
+    directStudents: users.filter(u => u.role === 'student' && !u.registeredBy && !u.createdByCounselor && u.isDeleted !== true).length,
+    partnerStudents: users.filter(u => u.role === 'student' && (!!u.registeredBy || !!u.createdByCounselor) && u.isDeleted !== true).length,
+    partners: users.filter(u => u.role === 'partner' && u.isDeleted !== true).length,
+    admins: users.filter(u => u.role === 'admin' && u.isDeleted !== true).length
   };
 
   if (loading) return (
@@ -573,6 +812,8 @@ const AdminPortal = () => {
           </div>
         </div>
 
+
+
         <nav className="sidebar-nav" style={{ flex: 1, overflowY: 'auto', paddingBottom: '40px' }}>
           <button className={`nav-item ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => { setActiveTab('overview'); cancelEdit(); if(window.innerWidth<=768) setIsSidebarOpen(false); }}>
             <Database size={18} /> Global Overview
@@ -609,6 +850,10 @@ const AdminPortal = () => {
           
           <button className={`nav-item ${activeTab === 'visitors' ? 'active' : ''}`} onClick={() => { setActiveTab('visitors'); fetchVisitors(); cancelEdit(); if(window.innerWidth<=768) setIsSidebarOpen(false); }}>
             <Globe2 size={18} /> Visitor Analytics
+          </button>
+
+          <button className={`nav-item ${activeTab === 'trash' ? 'active' : ''}`} onClick={() => { setActiveTab('trash'); cancelEdit(); if(window.innerWidth<=768) setIsSidebarOpen(false); }}>
+            <Trash2 size={18} /> Trash / Restorations
           </button>
 
           <button className="nav-item logout-btn" onClick={handleLogout} style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.05)', width: '100%', justifyContent: 'center', marginTop: '2.5rem' }}>
@@ -652,9 +897,9 @@ const AdminPortal = () => {
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
               <div>
                 <h1 style={{ color: 'var(--text-main)', fontSize: '1.6rem', margin: '0 0 8px 0', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  {activeTab === 'overview' ? 'System Overview' : activeTab === 'all' ? 'Master Ledger' : activeTab === 'direct_students' ? 'Direct Student Database' : activeTab === 'partner_students' ? 'Partner-Registered Students' : 'Partner Database'}
+                  {activeTab === 'overview' ? 'System Overview' : activeTab === 'all' ? 'Master Ledger' : activeTab === 'direct_students' ? 'Direct Student Database' : activeTab === 'partner_students' ? 'Partner-Registered Students' : activeTab === 'trash' ? 'Trash / Restorations' : 'Partner Database'}
                 </h1>
-                <p style={{ color: 'var(--text-muted)', margin: 0 }}>Directly manage and manipulate raw data records.</p>
+                <p style={{ color: 'var(--text-muted)', margin: 0 }}>{activeTab === 'trash' ? 'Restore or permanently delete removed accounts.' : 'Directly manage and manipulate raw data records.'}</p>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
@@ -665,13 +910,17 @@ const AdminPortal = () => {
                   <Monitor size={24} />
                 </button>
 
+                {/* EXPORT BUTTON */}
+                <button onClick={handleDownloadExcel} style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '10px 15px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.3s ease', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)' }} onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(16, 185, 129, 0.4)'; }} onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)'; }}>
+                  <Download size={16} /> Export Data
+                </button>
+
                 {/* Theme Toggle Group */}
                 <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px', border: '1px solid var(--glass-border)' }}>
                   <button onClick={() => setTheme('light')} style={{ background: theme === 'light' ? 'var(--accent-primary)' : 'transparent', color: theme === 'light' ? '#fff' : 'var(--text-muted)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }} title="Light Mode"><Sun size={14} /></button>
                   <button onClick={() => setTheme('dark')} style={{ background: theme === 'dark' ? 'var(--accent-primary)' : 'transparent', color: theme === 'dark' ? '#fff' : 'var(--text-muted)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }} title="Dark Mode"><Moon size={14} /></button>
                   <button onClick={() => setTheme('system')} style={{ background: theme === 'system' ? 'var(--accent-primary)' : 'transparent', color: theme === 'system' ? '#fff' : 'var(--text-muted)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }} title="System Sync"><Monitor size={14} /></button>
                 </div>
-
                 <button className="btn-save" onClick={() => setShowCreationTypePopup(true)} style={{ background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '8px', fontWeight: 600, border: 'none', cursor: 'pointer', color: '#fff' }}>
                   <Plus size={18} /> Create Account
                 </button>
@@ -679,7 +928,8 @@ const AdminPortal = () => {
             </header>
 
             {activeTab === 'overview' && (
-              <div className="admin-stats-grid" style={{ gap: '20px', marginBottom: '30px' }}>
+              <>
+              <div className="admin-stats-grid" style={{ gap: '20px', marginBottom: '20px' }}>
                 <div style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.05))', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '15px', borderRadius: '16px' }}>
                   <div style={{ color: '#60a5fa', fontSize: '2.5rem', fontWeight: 800 }}>{stats.total}</div>
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '5px' }}>Total Records</div>
@@ -697,6 +947,49 @@ const AdminPortal = () => {
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '5px' }}>Partners</div>
                 </div>
               </div>
+
+              {/* ── Website Traffic Mini-Widget ── */}
+              <div
+                onClick={() => { setActiveTab('visitors'); fetchVisitors(); cancelEdit(); }}
+                style={{
+                  background: 'linear-gradient(135deg, rgba(6,182,212,0.07), rgba(139,92,246,0.07))',
+                  border: '1px solid rgba(6,182,212,0.2)',
+                  borderRadius: '16px',
+                  padding: '18px 22px',
+                  marginBottom: '30px',
+                  cursor: 'pointer',
+                  transition: 'border-color 0.2s, box-shadow 0.2s',
+                }}
+                onMouseOver={e => { e.currentTarget.style.borderColor='rgba(6,182,212,0.5)'; e.currentTarget.style.boxShadow='0 4px 24px rgba(6,182,212,0.12)'; }}
+                onMouseOut={e => { e.currentTarget.style.borderColor='rgba(6,182,212,0.2)'; e.currentTarget.style.boxShadow='none'; }}
+              >
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                    <Globe2 size={20} color="#06b6d4" />
+                    <span style={{ fontWeight:700, fontSize:'0.95rem', color:'var(--text-main)', letterSpacing:'-0.3px' }}>Website Traffic</span>
+                    {visitorsLoading && <span style={{ fontSize:'0.7rem', color:'var(--text-muted)', fontStyle:'italic' }}>loading…</span>}
+                  </div>
+                  <span style={{ fontSize:'0.72rem', color:'#06b6d4', fontWeight:600, display:'flex', alignItems:'center', gap:'4px' }}>
+                    View Full Analytics →
+                  </span>
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
+                  {[
+                    { label:'Today',      value: visitorStats.todayCount,  color:'#06b6d4' },
+                    { label:'This Week',  value: visitorStats.weekCount,   color:'#8b5cf6' },
+                    { label:'This Month', value: visitorStats.monthCount,  color:'#f59e0b' },
+                    { label:'All Time',   value: visitorStats.total,       color:'#10b981' },
+                  ].map(s => (
+                    <div key={s.label} style={{ textAlign:'center' }}>
+                      <div style={{ fontSize:'1.8rem', fontWeight:800, color:s.color, lineHeight:1 }}>
+                        {visitorsLoading ? '…' : s.value}
+                      </div>
+                      <div style={{ fontSize:'0.7rem', color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.8px', marginTop:'4px' }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              </>
             )}
 
             {activeTab !== 'overview' && (
@@ -833,28 +1126,41 @@ const AdminPortal = () => {
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                          <button onClick={() => handleEdit(u)} style={{ background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.2s' }}>
-                            <Edit2 size={14} /> Modify
-                          </button>
-                          <button onClick={() => handleDeleteUser(u._id, u.role === 'admin')} disabled={u.role === 'admin'} style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '8px 12px', borderRadius: '8px', cursor: u.role === 'admin' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, opacity: u.role === 'admin' ? 0.3 : 1 }}>
-                            <Trash2 size={14} /> Obliterate
-                          </button>
-                          <button 
-                            onClick={() => handleToggleBlock(u._id)} 
-                            disabled={u.role === 'admin'}
-                            style={{ 
-                              background: u.isBlocked ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', 
-                              color: u.isBlocked ? '#10b981' : '#f59e0b', 
-                              border: `1px solid ${u.isBlocked ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`, 
-                              padding: '8px 12px', borderRadius: '8px', cursor: u.role === 'admin' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, opacity: u.role === 'admin' ? 0.3 : 1 
-                            }}
-                          >
-                            <Ban size={14} /> {u.isBlocked ? 'Unblock Account' : 'Block Assistant'}
-                          </button>
-                          {u.lockUntil && new Date(u.lockUntil) > new Date() && (
-                            <button onClick={() => handleUnlockUser(u._id)} style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
-                              <Unlock size={14} /> Unlock Access
-                            </button>
+                          {activeTab === 'trash' ? (
+                            <>
+                              <button onClick={() => handleRestoreUser(u._id)} style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.2s' }}>
+                                <RefreshCw size={14} /> Restore
+                              </button>
+                              <button onClick={() => handlePermanentDeleteUser(u._id)} style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                <Trash2 size={14} /> Permanently Delete
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => handleEdit(u)} style={{ background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.2s' }}>
+                                <Edit2 size={14} /> Modify
+                              </button>
+                              <button onClick={() => handleDeleteUser(u._id, u.role === 'admin')} disabled={u.role === 'admin'} style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', padding: '8px 12px', borderRadius: '8px', cursor: u.role === 'admin' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, opacity: u.role === 'admin' ? 0.3 : 1 }}>
+                                <Trash2 size={14} /> Obliterate
+                              </button>
+                              <button 
+                                onClick={() => handleToggleBlock(u._id)} 
+                                disabled={u.role === 'admin'}
+                                style={{ 
+                                  background: u.isBlocked ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)', 
+                                  color: u.isBlocked ? '#10b981' : '#f59e0b', 
+                                  border: `1px solid ${u.isBlocked ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`, 
+                                  padding: '8px 12px', borderRadius: '8px', cursor: u.role === 'admin' ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600, opacity: u.role === 'admin' ? 0.3 : 1 
+                                }}
+                              >
+                                <Ban size={14} /> {u.isBlocked ? 'Unblock Account' : 'Block Assistant'}
+                              </button>
+                              {u.lockUntil && new Date(u.lockUntil) > new Date() && (
+                                <button onClick={() => handleUnlockUser(u._id)} style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '8px 12px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 600 }}>
+                                  <Unlock size={14} /> Unlock Access
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </td>
@@ -1079,15 +1385,191 @@ const AdminPortal = () => {
               ))}
             </div>
 
-            {/* Search */}
-            <div style={{ marginBottom: '16px' }}>
-              <input
-                type="text"
-                placeholder="Search by IP, country, browser, city…"
-                value={visitorSearch}
-                onChange={e => setVisitorSearch(e.target.value)}
-                style={{ background: 'var(--input-bg)', color: 'var(--text-main)', border: '1px solid var(--glass-border)', padding: '10px 16px', borderRadius: '8px', width: '100%', outline: 'none', fontSize: '0.9rem', boxSizing: 'border-box' }}
-              />
+            {/* Filter Bar */}
+            <div style={{
+              display: 'flex',
+              gap: '15px',
+              marginBottom: '20px',
+              flexWrap: 'wrap',
+              alignItems: 'center'
+            }}>
+              {/* Search */}
+              <div style={{ flex: '1 1 300px', position: 'relative' }}>
+                <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  placeholder="Search by IP, country, browser, city, user…"
+                  value={visitorSearch}
+                  onChange={e => setVisitorSearch(e.target.value)}
+                  style={{
+                    background: 'var(--input-bg)',
+                    color: 'var(--text-main)',
+                    border: '1px solid var(--glass-border)',
+                    padding: '10px 16px 10px 40px',
+                    borderRadius: '10px',
+                    width: '100%',
+                    outline: 'none',
+                    fontSize: '0.9rem',
+                    boxSizing: 'border-box',
+                    transition: 'all 0.2s'
+                  }}
+                  onFocus={e => e.target.style.borderColor = 'var(--accent-secondary)'}
+                  onBlur={e => e.target.style.borderColor = 'var(--glass-border)'}
+                />
+              </div>
+
+              {/* Custom Date Filter Button with Calendar Popover */}
+              <div ref={calendarRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '10px',
+                    padding: '8px 16px',
+                    minHeight: '44px',
+                    cursor: 'pointer',
+                    color: 'var(--text-main)',
+                    fontSize: '0.88rem',
+                    transition: 'all 0.2s',
+                    outline: 'none'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent-secondary)'}
+                  onMouseLeave={e => {
+                    if (!showCalendar) e.currentTarget.style.borderColor = 'var(--glass-border)';
+                  }}
+                >
+                  <Calendar size={18} color="var(--accent-secondary)" />
+                  <span>
+                    {visitorDate 
+                      ? `${new Date(visitorDate).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                      : 'Select Date'
+                    }
+                  </span>
+                  {visitorDate && (
+                    <span style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      color: 'var(--accent-secondary)',
+                      textTransform: 'uppercase',
+                      marginLeft: '4px'
+                    }}>
+                      ({(() => {
+                        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                        const d = new Date(visitorDate);
+                        return isNaN(d.getTime()) ? '' : days[d.getDay()];
+                      })()})
+                    </span>
+                  )}
+                </button>
+
+                {/* Calendar Popover */}
+                {showCalendar && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '52px',
+                    right: windowWidth < 768 ? 'auto' : 0,
+                    left: windowWidth < 768 ? 0 : 'auto',
+                    zIndex: 1000,
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '14px',
+                    padding: '16px',
+                    width: '280px',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4)',
+                    backdropFilter: 'blur(10px)',
+                    boxSizing: 'border-box'
+                  }}>
+                    {/* Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <button onClick={prevMonth} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontSize: '1rem', padding: '4px 8px', outline: 'none' }}>&lt;</button>
+                      <span style={{ fontWeight: 600, color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                        {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </span>
+                      <button onClick={nextMonth} style={{ background: 'transparent', border: 'none', color: 'var(--text-main)', cursor: 'pointer', fontSize: '1rem', padding: '4px 8px', outline: 'none' }}>&gt;</button>
+                    </div>
+
+                    {/* Weekdays */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center', marginBottom: '8px' }}>
+                      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+                        <span key={d} style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)' }}>{d}</span>
+                      ))}
+                    </div>
+
+                    {/* Days Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+                      {calendarCells.map((cell, index) => {
+                        if (cell.type === 'empty') {
+                          return <div key={index} />;
+                        }
+
+                        const isSelected = visitorDate === cell.dateStr;
+                        const isToday = new Date().toISOString().slice(0, 10) === cell.dateStr;
+
+                        return (
+                          <button
+                            key={cell.key}
+                            onClick={() => {
+                              setVisitorDate(cell.dateStr);
+                              setShowCalendar(false);
+                            }}
+                            style={{
+                              background: isSelected ? 'var(--accent-secondary)' : 'transparent',
+                              color: isSelected ? '#fff' : 'var(--text-main)',
+                              border: isToday ? '1px solid var(--accent-secondary)' : 'none',
+                              borderRadius: '6px',
+                              padding: '6px 0',
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                              textAlign: 'center',
+                              transition: 'all 0.15s',
+                              outline: 'none'
+                            }}
+                            onMouseEnter={e => {
+                              if (!isSelected) {
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                              }
+                            }}
+                            onMouseLeave={e => {
+                              if (!isSelected) {
+                                e.currentTarget.style.background = 'transparent';
+                              }
+                            }}
+                          >
+                            {cell.day}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Bottom Actions */}
+                    {visitorDate && (
+                      <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--glass-border)', display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={() => {
+                            setVisitorDate('');
+                            setShowCalendar(false);
+                          }}
+                          style={{
+                            background: 'transparent',
+                            color: '#ef4444',
+                            border: 'none',
+                            fontSize: '0.78rem',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                            outline: 'none'
+                          }}
+                        >
+                          Clear Filter
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Table */}
@@ -1098,7 +1580,7 @@ const AdminPortal = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                   <thead style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--glass-border)' }}>
                     <tr>
-                      {['Time', 'IP Address', 'Location', 'Browser / OS', 'Device', 'Page', 'Referrer'].map(h => (
+                      {['Time', 'IP Address', 'User Profile', 'Location', 'Browser / OS', 'Device', 'Page', 'Referrer'].map(h => (
                         <th key={h} style={{ padding: '12px 16px', color: '#a1a1aa', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
@@ -1113,7 +1595,10 @@ const AdminPortal = () => {
                           (v.country || '').toLowerCase().includes(q) ||
                           (v.city || '').toLowerCase().includes(q) ||
                           (v.browser || '').toLowerCase().includes(q) ||
-                          (v.os || '').toLowerCase().includes(q)
+                          (v.os || '').toLowerCase().includes(q) ||
+                          (v.userName || '').toLowerCase().includes(q) ||
+                          (v.userEmail || '').toLowerCase().includes(q) ||
+                          (v.userRole || '').toLowerCase().includes(q)
                         );
                       })
                       .map((v, idx) => (
@@ -1123,6 +1608,32 @@ const AdminPortal = () => {
                             <div style={{ fontSize: '0.75rem' }}>{new Date(v.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
                           </td>
                           <td style={{ padding: '10px 16px', fontFamily: 'monospace', color: '#06b6d4', whiteSpace: 'nowrap' }}>{v.ip}</td>
+                          
+                          {/* Logged in User Profile */}
+                          <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
+                            {v.userName ? (
+                              <div>
+                                <div style={{ color: 'var(--text-main)', fontWeight: 600 }}>{v.userName}</div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{v.userEmail}</div>
+                                <span style={{
+                                  background: v.userRole === 'admin' ? 'rgba(239, 68, 68, 0.1)' : v.userRole === 'partner' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+                                  color: v.userRole === 'admin' ? '#ef4444' : v.userRole === 'partner' ? '#fbbf24' : '#60a5fa',
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  fontSize: '0.65rem',
+                                  fontWeight: 700,
+                                  textTransform: 'uppercase',
+                                  display: 'inline-block',
+                                  marginTop: '2px'
+                                }}>
+                                  {v.userRole}
+                                </span>
+                              </div>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', opacity: 0.5 }}>Guest</span>
+                            )}
+                          </td>
+
                           <td style={{ padding: '10px 16px' }}>
                             <div style={{ color: 'var(--text-main)', fontWeight: 500 }}>{v.country}</div>
                             <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{[v.city, v.regionName].filter(Boolean).join(', ')}</div>
@@ -1133,12 +1644,41 @@ const AdminPortal = () => {
                             <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{v.os}</div>
                           </td>
                           <td style={{ padding: '10px 16px' }}>
-                            <span style={{
-                              background: v.device === 'Mobile' ? 'rgba(139,92,246,0.1)' : v.device === 'Tablet' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)',
-                              color: v.device === 'Mobile' ? '#a78bfa' : v.device === 'Tablet' ? '#fbbf24' : '#34d399',
-                              border: `1px solid ${v.device === 'Mobile' ? 'rgba(139,92,246,0.3)' : v.device === 'Tablet' ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)'}`,
-                              padding: '3px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px'
-                            }}>{v.device}</span>
+                            {(() => {
+                              const isMobile = /Mobile|iPhone|Android|Phone/i.test(v.device);
+                              const isTablet = /Tablet|iPad/i.test(v.device);
+                              
+                              let bg = 'rgba(16,185,129,0.1)';
+                              let color = '#34d399';
+                              let border = 'rgba(16,185,129,0.3)';
+                              
+                              if (isMobile) {
+                                bg = 'rgba(139,92,246,0.1)';
+                                color = '#a78bfa';
+                                border = 'rgba(139,92,246,0.3)';
+                              } else if (isTablet) {
+                                bg = 'rgba(245,158,11,0.1)';
+                                color = '#fbbf24';
+                                border = 'rgba(245,158,11,0.3)';
+                              }
+                              
+                              return (
+                                <span style={{
+                                  background: bg,
+                                  color: color,
+                                  border: `1px solid ${border}`,
+                                  padding: '3px 10px',
+                                  borderRadius: '20px',
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  letterSpacing: '0.5px',
+                                  display: 'inline-block',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  {v.device}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td style={{ padding: '10px 16px', color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '0.8rem' }}>{v.page}</td>
                           <td style={{ padding: '10px 16px', color: 'var(--text-muted)', fontSize: '0.8rem', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1154,9 +1694,18 @@ const AdminPortal = () => {
                     {visitors.filter(v => {
                       if (!visitorSearch) return true;
                       const q = visitorSearch.toLowerCase();
-                      return (v.ip||'').toLowerCase().includes(q)||(v.country||'').toLowerCase().includes(q)||(v.city||'').toLowerCase().includes(q)||(v.browser||'').toLowerCase().includes(q)||(v.os||'').toLowerCase().includes(q);
+                      return (
+                        (v.ip||'').toLowerCase().includes(q) ||
+                        (v.country||'').toLowerCase().includes(q) ||
+                        (v.city||'').toLowerCase().includes(q) ||
+                        (v.browser||'').toLowerCase().includes(q) ||
+                        (v.os||'').toLowerCase().includes(q) ||
+                        (v.userName||'').toLowerCase().includes(q) ||
+                        (v.userEmail||'').toLowerCase().includes(q) ||
+                        (v.userRole||'').toLowerCase().includes(q)
+                      );
                     }).length === 0 && (
-                      <tr><td colSpan="7" style={{ padding: '50px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      <tr><td colSpan="8" style={{ padding: '50px', textAlign: 'center', color: 'var(--text-muted)' }}>
                         <Globe2 size={40} style={{ margin: '0 auto 15px auto', opacity: 0.2, display: 'block' }} />
                         {visitorSearch ? 'No visitors match your search.' : 'No visitors recorded yet. Visit the website to generate data.'}
                       </td></tr>
@@ -1872,18 +2421,20 @@ const AdminPortal = () => {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease' }}>
           <div style={{ background: 'var(--card-bg-solid)', padding: '20px', borderRadius: '16px', border: '1px solid var(--glass-border)', maxWidth: '400px', width: '90%', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' }}>
             <h3 style={{ color: 'var(--text-main)', margin: '0 0 15px 0', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '1rem' }}>
-              {confirmDialog.action === 'delete' ? <Trash2 color="#ef4444" /> : <Save color="#10b981" />}
-              {confirmDialog.action === 'delete' ? 'Confirm Deletion' : 'Confirm Changes'}
+              {(confirmDialog.action === 'delete' || confirmDialog.action === 'deletePermanent') ? <Trash2 color="#ef4444" /> : <Save color="#10b981" />}
+              {confirmDialog.action === 'delete' ? 'Move to Trash' : confirmDialog.action === 'deletePermanent' ? 'Confirm Permanent Deletion' : 'Confirm Changes'}
             </h3>
             <p style={{ color: 'var(--text-muted)', marginBottom: '25px', fontSize: '0.9rem', lineHeight: '1.5' }}>
               {confirmDialog.action === 'delete'
+                ? "This will move the user to the Trash. They will lose access immediately, but can be restored later. Proceed?"
+                : confirmDialog.action === 'deletePermanent'
                 ? "This will permanently obliterate the user and all associated application data. This destructive action cannot be undone. Proceed?"
                 : "Are you sure you want to permanently commit these modifications to the global database?"}
             </p>
             <div style={{ display: 'flex', gap: '15px', justifyContent: 'flex-end' }}>
               <button onClick={() => setConfirmDialog({ isOpen: false, action: null, targetId: null })} style={{ padding: '10px 20px', background: 'var(--input-bg)', border: '1px solid var(--glass-border)', color: 'var(--text-main)', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>Cancel</button>
-              <button onClick={confirmDialog.action === 'delete' ? executeDelete : executeSave} style={{ padding: '10px 20px', background: confirmDialog.action === 'delete' ? '#ef4444' : '#10b981', border: 'none', color: '#fff', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>
-                {confirmDialog.action === 'delete' ? 'Obliterate Entity' : 'Commit Database Update'}
+              <button onClick={(confirmDialog.action === 'delete' || confirmDialog.action === 'deletePermanent') ? executeDelete : executeSave} style={{ padding: '10px 20px', background: (confirmDialog.action === 'delete' || confirmDialog.action === 'deletePermanent') ? '#ef4444' : '#10b981', border: 'none', color: '#fff', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>
+                {confirmDialog.action === 'delete' ? 'Move to Trash' : confirmDialog.action === 'deletePermanent' ? 'Obliterate Entity' : 'Commit Database Update'}
               </button>
             </div>
           </div>
