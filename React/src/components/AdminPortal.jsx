@@ -54,6 +54,56 @@ const AdminPortal = () => {
   const calendarRef = useRef(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
+  // Visitor Resizable Columns State & Handlers
+  const [visitorColWidths, setVisitorColWidths] = useState({
+    time: 150,
+    ip: 130,
+    user: 180,
+    location: 180,
+    browser: 150,
+    device: 120,
+    page: 180,
+    referrer: 160
+  });
+
+  const handleVisitorColResizeStart = (columnKey, e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = visitorColWidths[columnKey];
+
+    const handleMouseMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const newWidth = Math.max(70, startWidth + deltaX);
+      setVisitorColWidths((prev) => ({
+        ...prev,
+        [columnKey]: newWidth
+      }));
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const totalVisitorTableWidth = React.useMemo(() => {
+    return Object.values(visitorColWidths).reduce((sum, w) => sum + w, 0);
+  }, [visitorColWidths]);
+
+  const visitorColumns = [
+    { key: 'time', label: 'Time' },
+    { key: 'ip', label: 'IP Address' },
+    { key: 'user', label: 'User Profile' },
+    { key: 'location', label: 'Location' },
+    { key: 'browser', label: 'Browser / OS' },
+    { key: 'device', label: 'Device' },
+    { key: 'page', label: 'Page' },
+    { key: 'referrer', label: 'Referrer' }
+  ];
+
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
@@ -1576,12 +1626,70 @@ const AdminPortal = () => {
             {visitorsLoading ? (
               <div style={{ padding: '50px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading visitor data…</div>
             ) : (
-              <div style={{ background: 'var(--card-bg-solid)', border: '1px solid var(--glass-border)', borderRadius: '16px', overflowX: 'auto', boxShadow: 'var(--shadow-lg)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
-                  <thead style={{ background: 'var(--table-header-bg)', borderBottom: '1px solid var(--glass-border)' }}>
+              <div className="visitor-scroll-container" style={{ background: 'var(--card-bg-solid)', border: '1px solid var(--glass-border)', borderRadius: '16px', overflowX: 'auto', overflowY: 'auto', maxHeight: '550px', boxShadow: 'var(--shadow-lg)', position: 'relative' }}>
+                <style>{`
+                  .visitor-scroll-container {
+                    scrollbar-width: thin;
+                    scrollbar-color: var(--glass-border, rgba(255, 255, 255, 0.15)) transparent;
+                  }
+                  .visitor-scroll-container::-webkit-scrollbar {
+                    width: 6px;
+                    height: 6px;
+                  }
+                  .visitor-scroll-container::-webkit-scrollbar-track {
+                    background: transparent;
+                  }
+                  .visitor-scroll-container::-webkit-scrollbar-thumb {
+                    background: var(--glass-border, rgba(255, 255, 255, 0.15));
+                    border-radius: 10px;
+                    transition: background-color 0.2s;
+                  }
+                  .visitor-scroll-container::-webkit-scrollbar-thumb:hover {
+                    background: var(--accent-secondary, #06b6d4);
+                  }
+                  .visitor-col-resizer {
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    bottom: 0;
+                    width: 6px;
+                    cursor: col-resize;
+                    user-select: none;
+                    z-index: 10;
+                    background: transparent;
+                    transition: background-color 0.2s;
+                  }
+                  .visitor-col-resizer:hover, .visitor-col-resizer:active {
+                    background-color: var(--accent-secondary) !important;
+                  }
+                `}</style>
+                <table style={{ width: `${totalVisitorTableWidth}px`, tableLayout: 'fixed', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 12 }}>
                     <tr>
-                      {['Time', 'IP Address', 'User Profile', 'Location', 'Browser / OS', 'Device', 'Page', 'Referrer'].map(h => (
-                        <th key={h} style={{ padding: '12px 16px', color: '#a1a1aa', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                      {visitorColumns.map(col => (
+                        <th 
+                          key={col.key} 
+                          style={{ 
+                            padding: '12px 16px', 
+                            color: '#a1a1aa', 
+                            fontSize: '0.72rem', 
+                            textTransform: 'uppercase', 
+                            letterSpacing: '1px', 
+                            fontWeight: 600, 
+                            whiteSpace: 'nowrap',
+                            position: 'relative',
+                            width: `${visitorColWidths[col.key]}px`,
+                            boxSizing: 'border-box',
+                            background: 'var(--bg-secondary)',
+                            borderBottom: '1px solid var(--glass-border)'
+                          }}
+                        >
+                          <div style={{ marginRight: '10px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{col.label}</div>
+                          <div 
+                            onMouseDown={(e) => handleVisitorColResizeStart(col.key, e)}
+                            className="visitor-col-resizer"
+                          />
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -1603,18 +1711,18 @@ const AdminPortal = () => {
                       })
                       .map((v, idx) => (
                         <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                          <td style={{ padding: '10px 16px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                            <div style={{ color: 'var(--text-main)', fontWeight: 500 }}>{new Date(v.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                            <div style={{ fontSize: '0.75rem' }}>{new Date(v.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                          <td style={{ padding: '10px 16px', color: 'var(--text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div style={{ color: 'var(--text-main)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>{new Date(v.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                            <div style={{ fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>{new Date(v.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
                           </td>
-                          <td style={{ padding: '10px 16px', fontFamily: 'monospace', color: '#06b6d4', whiteSpace: 'nowrap' }}>{v.ip}</td>
+                          <td style={{ padding: '10px 16px', fontFamily: 'monospace', color: '#06b6d4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={v.ip}>{v.ip}</td>
                           
                           {/* Logged in User Profile */}
-                          <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
+                          <td style={{ padding: '10px 16px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {v.userName ? (
-                              <div>
-                                <div style={{ color: 'var(--text-main)', fontWeight: 600 }}>{v.userName}</div>
-                                <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{v.userEmail}</div>
+                              <div style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                <div style={{ color: 'var(--text-main)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }} title={v.userName}>{v.userName}</div>
+                                <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis' }} title={v.userEmail}>{v.userEmail}</div>
                                 <span style={{
                                   background: v.userRole === 'admin' ? 'rgba(239, 68, 68, 0.1)' : v.userRole === 'partner' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(59, 130, 246, 0.1)',
                                   color: v.userRole === 'admin' ? '#ef4444' : v.userRole === 'partner' ? '#fbbf24' : '#60a5fa',
@@ -1634,16 +1742,16 @@ const AdminPortal = () => {
                             )}
                           </td>
 
-                          <td style={{ padding: '10px 16px' }}>
-                            <div style={{ color: 'var(--text-main)', fontWeight: 500 }}>{v.country}</div>
-                            <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{[v.city, v.regionName].filter(Boolean).join(', ')}</div>
-                            {v.isp && <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', opacity: 0.7 }}>{v.isp}</div>}
+                          <td style={{ padding: '10px 16px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div style={{ color: 'var(--text-main)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={v.country}>{v.country}</div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={[v.city, v.regionName].filter(Boolean).join(', ')}>{[v.city, v.regionName].filter(Boolean).join(', ')}</div>
+                            {v.isp && <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={v.isp}>{v.isp}</div>}
                           </td>
-                          <td style={{ padding: '10px 16px' }}>
-                            <div style={{ color: 'var(--text-main)' }}>{v.browser}</div>
-                            <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>{v.os}</div>
+                          <td style={{ padding: '10px 16px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div style={{ color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={v.browser}>{v.browser}</div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={v.os}>{v.os}</div>
                           </td>
-                          <td style={{ padding: '10px 16px' }}>
+                          <td style={{ padding: '10px 16px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {(() => {
                               const isMobile = /Mobile|iPhone|Android|Phone/i.test(v.device);
                               const isTablet = /Tablet|iPad/i.test(v.device);
@@ -1673,15 +1781,18 @@ const AdminPortal = () => {
                                   fontWeight: 700,
                                   letterSpacing: '0.5px',
                                   display: 'inline-block',
-                                  whiteSpace: 'nowrap'
-                                }}>
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  maxWidth: '100%'
+                                }} title={v.device}>
                                   {v.device}
                                 </span>
                               );
                             })()}
                           </td>
-                          <td style={{ padding: '10px 16px', color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '0.8rem' }}>{v.page}</td>
-                          <td style={{ padding: '10px 16px', color: 'var(--text-muted)', fontSize: '0.8rem', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <td style={{ padding: '10px 16px', color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={v.page}>{v.page}</td>
+                          <td style={{ padding: '10px 16px', color: 'var(--text-muted)', fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {v.referrer === 'Direct' || !v.referrer ? (
                               <span style={{ color: '#10b981', fontWeight: 600 }}>Direct</span>
                             ) : (

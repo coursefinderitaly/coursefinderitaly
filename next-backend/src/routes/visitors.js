@@ -75,6 +75,12 @@ router.post('/track', async (req, res) => {
     // ── Geo lookup (ip-api.com — free, no API key needed)
     let country = 'Unknown', city = 'Unknown', regionName = '', isp = '';
     const isPrivate = /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|127\.|::1$|localhost)/.test(ip);
+    
+    // Skip recording local network visits (localhost and private IPv4/IPv6 addresses)
+    if (isPrivate || ip === '127.0.0.1' || ip === '::1' || ip === 'localhost') {
+      return res.status(200).json({ ok: true, message: 'Local network/development visits are not recorded.' });
+    }
+
     if (!isPrivate && ip !== 'unknown') {
       try {
         const geoRes = await fetch(`http://ip-api.com/json/${ip}?fields=country,city,regionName,isp,status`);
@@ -117,6 +123,11 @@ router.post('/track', async (req, res) => {
       } catch (jwtErr) {
         // Invalid or expired token — ignore silently
       }
+    }
+
+    // Skip recording admin page views/analytics to keep logs focused on public visitors
+    if (userRole === 'admin') {
+      return res.status(200).json({ ok: true, message: 'Admin visits are not recorded.' });
     }
 
     await Visitor.create({
